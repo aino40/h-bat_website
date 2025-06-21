@@ -5,25 +5,47 @@
 /* H-BAT Application Global Styles */
 
 :root {
-  /* Light theme colors */
+  /* Light theme colors - H-BAT Design System */
   --background: #ffffff;
   --foreground: #111827;
+  
+  /* Primary Colors (音響・音楽テーマ) */
   --primary: #2563eb;
   --primary-foreground: #ffffff;
+  --primary-50: #eff6ff;
+  --primary-500: #2563eb;
+  --primary-600: #1d4ed8;
+  
+  /* Secondary Colors (ポップ要素) */
   --secondary: #f3f4f6;
   --secondary-foreground: #374151;
   --accent: #7c3aed;
   --accent-foreground: #ffffff;
+  
+  /* Status Colors */
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  
+  /* Neutral Colors */
   --muted: #f9fafb;
   --muted-foreground: #6b7280;
   --border: #e5e7eb;
   --ring: #2563eb;
   
-  /* Audio test specific colors */
-  --success: #10b981;
-  --error: #ef4444;
-  --warning: #f59e0b;
-  --info: #3b82f6;
+  /* Admin Colors */
+  --admin-primary: #1e40af;
+  --admin-secondary: #64748b;
+  --admin-accent: #7c3aed;
+  --admin-dark: #0f172a;
+  
+  /* Data Visualization Colors */
+  --chart-blue: #3b82f6;
+  --chart-green: #10b981;
+  --chart-purple: #8b5cf6;
+  --chart-orange: #f59e0b;
+  --chart-red: #ef4444;
 }
 
 * {
@@ -32,28 +54,144 @@
 
 html {
   scroll-behavior: smooth;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Audio test specific styles */
+/* H-BAT Specific Component Styles */
+
+/* Audio Button Enhancements */
 .audio-button {
-  @apply transition-all duration-200 ease-in-out;
+  @apply transition-all duration-200 ease-in-out relative overflow-hidden;
 }
 
 .audio-button:hover {
-  @apply transform scale-105;
+  @apply transform -translate-y-0.5 shadow-button;
 }
 
 .audio-button:active {
-  @apply transform scale-95;
+  @apply transform translate-y-0 scale-95;
+}
+
+.audio-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.audio-button:hover::before {
+  left: 100%;
+}
+
+/* Card Enhancements */
+.card-elevated {
+  @apply transition-all duration-300 ease-out;
+}
+
+.card-elevated:hover {
+  @apply shadow-elevated transform translate-y-1;
+}
+
+/* Progress Bar Enhancements */
+.progress-bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background-image: linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.2) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.2) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 50px 50px;
+  animation: move 2s linear infinite;
+}
+
+@keyframes move {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 50px 50px;
+  }
+}
+
+/* Volume Indicator Pulse */
+.volume-pulse {
+  animation: volume-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes volume-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+/* Test Progress Animations */
+.step-completed {
+  animation: step-complete 0.5s ease-out;
+}
+
+@keyframes step-complete {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Admin Dashboard Enhancements */
+.stats-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 /* Accessibility improvements */
@@ -71,7 +209,27 @@ body {
 
 /* Focus styles for better accessibility */
 .focus-visible {
-  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border: #000000;
+    --muted-foreground: #000000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Custom scrollbar */
@@ -81,13 +239,98 @@ body {
 
 ::-webkit-scrollbar-track {
   background: var(--muted);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 4px;
+  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
+}
+
+/* Selection styles */
+::selection {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+::-moz-selection {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Print styles */
+@media print {
+  * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  body {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  /* Improve touch targets */
+  button, .button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Optimize animations for mobile */
+  .audio-button:hover {
+    transform: none;
+  }
+  
+  .card-elevated:hover {
+    transform: none;
+  }
+}
+
+/* Dark mode support (future enhancement) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --border: #334155;
+  }
+}
+
+/* Loading states */
+.loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Utility classes */
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
 }
