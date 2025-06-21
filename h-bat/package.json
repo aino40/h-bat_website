@@ -12,11 +12,12 @@
     "test:ui": "vitest --ui",
     "format": "prettier --write .",
     "type-check": "tsc --noEmit",
-    "supabase:test": "npx tsx src/lib/test-connection.ts",
     "supabase:dashboard": "open https://supabase.com/dashboard/project/tpfsgdeyyruydpzfxyud",
     "supabase:db": "npx supabase db --help",
     "supabase:gen-types": "npx supabase gen types typescript --project-id tpfsgdeyyruydpzfxyud > src/types/database.ts",
-    "supabase:seed": "npx tsx scripts/seed-test-data.ts"
+    "supabase:seed": "npx tsx scripts/seed-test-data.ts",
+    "admin:create": "npx tsx scripts/create-admin.ts",
+    "admin:list": "npx tsx scripts/create-admin.ts --list"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
