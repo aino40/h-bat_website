@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AudioProvider } from '@/contexts/AudioContext'
@@ -6,7 +6,11 @@ import { AudioProvider } from '@/contexts/AudioContext'
 export const metadata: Metadata = {
   title: "H-BAT | Rhythm Perception Test",
   description: "H-BAT (Rhythm Perception Test) - リズム知覚能力のオンライン評価システム",
-  viewport: "width=device-width, initial-scale=1",
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({

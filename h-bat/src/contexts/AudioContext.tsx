@@ -45,12 +45,27 @@ interface AudioProviderProps {
 
 // 音響プロバイダーコンポーネント
 export function AudioProvider({ children, autoInitialize = true }: AudioProviderProps) {
-  const [state, setState] = useState<AudioEngineState>(getAudioEngineState())
+  const [state, setState] = useState<AudioEngineState>(() => {
+    // Server-side safe initialization
+    if (typeof window === 'undefined') {
+      return {
+        isInitialized: false,
+        isStarted: false,
+        hasUserPermission: false,
+        context: null,
+        masterVolume: null,
+        error: null
+      }
+    }
+    return getAudioEngineState()
+  })
   const [isLoading, setIsLoading] = useState(false)
 
   // 状態の更新
   const updateState = useCallback(() => {
-    setState(getAudioEngineState())
+    if (typeof window !== 'undefined') {
+      setState(getAudioEngineState())
+    }
   }, [])
 
   // 音響エンジンの初期化
@@ -138,7 +153,7 @@ export function AudioProvider({ children, autoInitialize = true }: AudioProvider
 
   // 自動初期化
   useEffect(() => {
-    if (autoInitialize && !state.isInitialized && !isLoading) {
+    if (typeof window !== 'undefined' && autoInitialize && !state.isInitialized && !isLoading) {
       initialize()
     }
   }, [autoInitialize, state.isInitialized, isLoading, initialize])

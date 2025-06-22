@@ -1,21 +1,33 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  console.warn('Missing env.NEXT_PUBLIC_SUPABASE_URL - Supabase features will be disabled')
+}
+if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  console.warn('Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY - Supabase features will be disabled')
+}
+
+// Create a mock client if environment variables are missing (for development)
+export const supabase = (supabaseUrl && supabaseAnonKey) 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : createClient('https://placeholder.supabase.co', 'placeholder-key')
 
 // Service role client for admin operations
-export const supabaseAdmin = createClient(
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+export const supabaseAdmin = serviceRoleKey ? createClient(
   supabaseUrl,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  serviceRoleKey,
   {
     auth: {
       autoRefreshToken: false,
       persistSession: false
     }
   }
-)
+) : null
 
 // Database types will be generated after schema is created
 export type Database = {

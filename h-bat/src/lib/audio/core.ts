@@ -24,6 +24,11 @@ let audioEngineState: AudioEngineState = {
 
 // 音響エンジンの初期化
 export async function initializeAudioEngine(): Promise<boolean> {
+  // Server-side safety check
+  if (typeof window === 'undefined') {
+    return false
+  }
+
   try {
     // 既に初期化済みの場合はスキップ
     if (audioEngineState.isInitialized) {
@@ -56,6 +61,11 @@ export async function initializeAudioEngine(): Promise<boolean> {
 
 // ユーザー操作による音響開始（ブラウザ制限対応）
 export async function startAudioWithUserGesture(): Promise<boolean> {
+  // Server-side safety check
+  if (typeof window === 'undefined') {
+    return false
+  }
+
   try {
     if (Tone.context.state !== 'running') {
       await Tone.start()
@@ -151,6 +161,16 @@ export function checkAudioSupport(): {
   hasToneJs: boolean
   supportedFormats: string[]
 } {
+  // Server-side safety check
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return {
+      hasWebAudio: false,
+      hasAudioContext: false,
+      hasToneJs: false,
+      supportedFormats: []
+    }
+  }
+
   const audio = document.createElement('audio')
   
   return {
