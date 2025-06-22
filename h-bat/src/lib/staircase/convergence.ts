@@ -1,6 +1,6 @@
 'use client'
 
-import { StaircaseTrial, StaircaseConfig, StaircaseState } from './core'
+import { StaircaseTrial } from './core'
 
 // 収束判定の設定
 export interface ConvergenceConfig {
@@ -181,7 +181,7 @@ export class ConvergenceDetector {
   checkConvergence(
     trials: StaircaseTrial[], 
     startTime: Date,
-    currentLevel: number
+    _currentLevel: number
   ): ConvergenceState {
     const timeElapsed = Date.now() - startTime.getTime()
     const reversalPoints = this.reversalDetector.extractReversalPoints(trials)
@@ -260,7 +260,7 @@ export class ConvergenceDetector {
   }
 
   // 品質チェック
-  private checkQuality(reversalPoints: number[], metrics: ConvergenceMetrics): {
+  private checkQuality(reversalPoints: number[], _metrics: ConvergenceMetrics): {
     quality: ConvergenceQuality
     confidence: number
     variability: number
@@ -438,12 +438,12 @@ export class ConvergenceDetector {
 
     // 線形回帰の傾き
     const n = data.length
-    const sumX = (n * (n - 1)) / 2
-    const sumY = data.reduce((sum, val) => sum + val, 0)
-    const sumXY = data.reduce((sum, val, idx) => sum + val * idx, 0)
-    const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6
+    // const sumX = (n * (n - 1)) / 2
+    // const sumY = data.reduce((sum, val) => sum + val, 0)
+    // const sumXY = data.reduce((sum, val, idx) => sum + val * idx, 0)
+    // const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6
 
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
+    // const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
 
     // 分散の変化
     const firstHalf = data.slice(0, Math.floor(n / 2))

@@ -4,7 +4,6 @@ import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { 
   StaircaseController, 
-  StaircaseState, 
   StaircaseTrial, 
   StaircaseResult,
   StaircaseConfig,
@@ -457,15 +456,15 @@ export const useStaircaseStore = create<StaircaseStore>()(
 
           switch (testType) {
             case 'bst':
-              return currentSession.bstTest.result
+              return currentSession.bstTest.result || null
             case 'bit':
-              return currentSession.bitTest.result
+              return currentSession.bitTest.result || null
             case 'bfit':
-              return currentSession.bfitTest.result
+              return currentSession.bfitTest.result || null
             case 'hearing':
               // 聴力測定は複数結果を統合
               const results = Array.from(currentSession.hearingTest.results.values())
-              return results.length > 0 ? results[0] : null // 簡略化
+              return results.length > 0 ? results[0] || null : null // 簡略化
             default:
               return null
           }

@@ -204,7 +204,7 @@ export class StaircaseController {
            this.state.currentDirection !== nextDirection
   }
 
-  private calculateNextLevel(direction: 'up' | 'down', isReversal: boolean): number {
+  private calculateNextLevel(direction: 'up' | 'down', _isReversal: boolean): number {
     let nextLevel = this.state.currentLevel
 
     // BST/BIT/BFITの場合は乗算、聴力測定の場合は加算

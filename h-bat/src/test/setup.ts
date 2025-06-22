@@ -37,7 +37,7 @@ global.AudioContext = class MockAudioContext {
   resume() {
     return Promise.resolve()
   }
-} as any
+} as unknown as typeof AudioContext
 
 // Mock window.webkitAudioContext
-;(global as any).webkitAudioContext = global.AudioContext 
+;(global as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext = global.AudioContext 
