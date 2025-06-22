@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from '@/contexts/AuthContext'
+import { AudioProvider } from '@/contexts/AudioContext'
 
 export const metadata: Metadata = {
   title: "H-BAT | Rhythm Perception Test",
@@ -17,7 +18,9 @@ export default function RootLayout({
     <html lang="ja">
       <body className="antialiased">
         <AuthProvider>
-          {children}
+          <AudioProvider autoInitialize={true}>
+            {children}
+          </AudioProvider>
         </AuthProvider>
       </body>
     </html>
