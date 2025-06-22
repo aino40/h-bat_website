@@ -1,7 +1,6 @@
 'use client'
 
 import * as Tone from 'tone'
-import { AudioEngineError } from './core'
 
 // 音響エラーの種類
 export enum AudioErrorType {
@@ -101,10 +100,10 @@ class AudioErrorHandler {
   }
 
   // 音響関連エラーの判定
-  private isAudioRelatedError(error: any): boolean {
+  private isAudioRelatedError(error: unknown): boolean {
     if (!error) return false
     
-    const message = error.message || error.toString()
+    const message = (error as Error).message || String(error)
     const audioKeywords = [
       'audio', 'AudioContext', 'Tone', 'playback', 'sample', 
       'volume', 'sound', 'media', 'microphone', 'speaker'
@@ -241,7 +240,6 @@ class AudioErrorHandler {
     
     // フォールバックモードに切り替え
     if (this.config.silentModeEnabled) {
-      console.log('🔇 Switching to silent mode')
       return true // サイレントモードで継続
     }
     
@@ -263,11 +261,8 @@ class AudioErrorHandler {
     
     // フォールバック戦略を順次試行
     for (const strategy of this.config.fallbackStrategies) {
-      console.log(`🔄 Attempting recovery with strategy: ${strategy}`)
-      
       const success = await this.executeRecoveryStrategy(strategy, errorInfo)
       if (success) {
-        console.log(`✅ Recovery successful with strategy: ${strategy}`)
         this.retryCounters.delete(retryKey)
         return true
       }
@@ -327,34 +322,31 @@ class AudioErrorHandler {
   }
 
   // 代替音源の使用
-  private async useAlternativeSample(errorInfo: AudioErrorInfo): Promise<boolean> {
+  private async useAlternativeSample(_errorInfo: AudioErrorInfo): Promise<boolean> {
     // 実装は音源管理システムと連携
-    console.log('🔄 Attempting to use alternative sample')
     return false // 実装依存
   }
 
   // 音質の低下
-  private async reduceAudioQuality(errorInfo: AudioErrorInfo): Promise<boolean> {
+  private async reduceAudioQuality(_errorInfo: AudioErrorInfo): Promise<boolean> {
     try {
       // サンプルレートを下げる、ビット深度を下げるなど
-      console.log('🔄 Reducing audio quality')
       return true
-    } catch (error) {
+    } catch {
       return false
     }
   }
 
   // サイレントモードの有効化
   private enableSilentMode(): boolean {
-    console.log('🔇 Enabling silent mode')
     this.config.silentModeEnabled = true
     return true
   }
 
   // 手動介入の要求
-  private async requestManualIntervention(errorInfo: AudioErrorInfo): Promise<boolean> {
+  private async requestManualIntervention(_errorInfo: AudioErrorInfo): Promise<boolean> {
     if (this.config.userNotificationEnabled) {
-      this.notifyUser(errorInfo, false, true)
+      this.notifyUser(_errorInfo, false, true)
     }
     return false // 手動介入が必要
   }
@@ -454,7 +446,6 @@ class AudioErrorHandler {
     this.errorHistory = []
     this.retryCounters.clear()
     this.recoveryCallbacks.clear()
-    console.log('🔄 Audio error handler reset')
   }
 }
 
@@ -487,8 +478,6 @@ export function getAudioErrorStatistics() {
 
 // H-BAT特化のエラーハンドリング
 export function setupHBatErrorHandling(): void {
-  console.log('🎵 Setting up H-BAT error handling...')
-  
   // H-BAT特有の復旧コールバックを登録
   registerAudioRecoveryCallback(AudioErrorType.CONTEXT_SUSPENDED, async () => {
     try {
@@ -513,6 +502,4 @@ export function setupHBatErrorHandling(): void {
       return false
     }
   })
-  
-  console.log('✅ H-BAT error handling setup complete')
 } 

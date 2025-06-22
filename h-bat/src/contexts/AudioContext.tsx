@@ -9,8 +9,7 @@ import {
   getAudioEngineState,
   setMasterVolume,
   getMasterVolume,
-  performAudioHealthCheck,
-  AudioEngineError
+  performAudioHealthCheck
 } from '@/lib/audio/core'
 
 // 音響コンテキストの型定義
@@ -175,10 +174,7 @@ export function useAudio(): AudioContextType {
   const context = useContext(AudioContext)
   
   if (!context) {
-    throw new AudioEngineError(
-      'useAudio must be used within an AudioProvider',
-      'CONTEXT_NOT_FOUND'
-    )
+    throw new Error('useAudio must be used within an AudioProvider')
   }
   
   return context

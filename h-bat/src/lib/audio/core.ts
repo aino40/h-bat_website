@@ -46,7 +46,6 @@ export async function initializeAudioEngine(): Promise<boolean> {
       error: null
     }
 
-    console.log('🎵 Audio Engine initialized successfully')
     return true
   } catch (error) {
     console.error('❌ Failed to initialize audio engine:', error)
@@ -65,7 +64,6 @@ export async function startAudioWithUserGesture(): Promise<boolean> {
     audioEngineState.hasUserPermission = true
     audioEngineState.isStarted = true
     
-    console.log('🎵 Audio started with user gesture')
     return true
   } catch (error) {
     console.error('❌ Failed to start audio with user gesture:', error)
@@ -90,7 +88,6 @@ export function stopAudioEngine(): void {
       masterVolume: null
     }
     
-    console.log('🔇 Audio Engine stopped')
   } catch (error) {
     console.error('❌ Error stopping audio engine:', error)
   }
@@ -107,7 +104,6 @@ export function setMasterVolume(volumeDb: number): void {
     // -60dB ～ 0dB の範囲で制限
     const clampedVolume = Math.max(-60, Math.min(0, volumeDb))
     audioEngineState.masterVolume.volume.value = clampedVolume
-    console.log(`🔊 Master volume set to ${clampedVolume}dB`)
   }
 }
 
@@ -159,7 +155,7 @@ export function checkAudioSupport(): {
   
   return {
     hasWebAudio: 'AudioContext' in window || 'webkitAudioContext' in window,
-    hasAudioContext: !!window.AudioContext || !!(window as any).webkitAudioContext,
+    hasAudioContext: !!window.AudioContext || !!((window as unknown as { webkitAudioContext?: AudioContext }).webkitAudioContext),
     hasToneJs: typeof Tone !== 'undefined',
     supportedFormats: [
       audio.canPlayType('audio/wav') ? 'wav' : '',
@@ -167,18 +163,6 @@ export function checkAudioSupport(): {
       audio.canPlayType('audio/ogg') ? 'ogg' : '',
       audio.canPlayType('audio/webm') ? 'webm' : ''
     ].filter(Boolean)
-  }
-}
-
-// エラーハンドリング
-export class AudioEngineError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-    public details?: any
-  ) {
-    super(message)
-    this.name = 'AudioEngineError'
   }
 }
 

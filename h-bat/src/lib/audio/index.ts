@@ -5,7 +5,6 @@
 export {
   // Types
   type AudioEngineState,
-  AudioEngineError,
   
   // Core functions
   initializeAudioEngine,
@@ -116,8 +115,6 @@ import { handleAudioError, AudioErrorType, setupHBatErrorHandling } from './erro
 export const HBatAudio = {
   // Initialization
   async initialize() {
-    console.log('🎵 Initializing H-BAT Audio System...')
-    
     try {
       // Setup error handling
       setupHBatErrorHandling()
@@ -134,7 +131,6 @@ export const HBatAudio = {
         console.warn('⚠️ Some audio samples failed to load')
       }
       
-      console.log('✅ H-BAT Audio System initialized successfully')
       return true
       
     } catch (error) {

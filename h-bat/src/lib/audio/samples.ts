@@ -114,7 +114,6 @@ class AudioSampleManager {
       sample.isLoaded = true
       sample.isLoading = false
 
-      console.log(`✅ Sample loaded: ${config.name}`)
       return true
 
     } catch (error) {
@@ -147,7 +146,6 @@ class AudioSampleManager {
     })
 
     const success = failed.length === 0
-    console.log(`🎵 Sample loading complete: ${loaded.length}/${sampleIds.length} loaded`)
 
     return { success, loaded, failed }
   }
@@ -249,11 +247,10 @@ export const sampleManager = new AudioSampleManager()
 
 // 便利な関数群
 export async function preloadAudioSamples(): Promise<boolean> {
-  console.log('🎵 Starting audio sample preload...')
   const result = await sampleManager.loadAllSamples()
   
   if (result.success) {
-    console.log('✅ All audio samples loaded successfully')
+    console.warn('✅ All audio samples loaded successfully')
   } else {
     console.warn(`⚠️ Some samples failed to load: ${result.failed.join(', ')}`)
   }

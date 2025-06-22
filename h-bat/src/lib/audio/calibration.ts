@@ -1,7 +1,6 @@
 'use client'
 
-import * as Tone from 'tone'
-import { dbSplToToneVolume, toneVolumeToDbSpl } from './core'
+import { dbSplToToneVolume } from './core'
 
 // キャリブレーション設定
 export interface CalibrationConfig {
@@ -75,8 +74,6 @@ class AudioCalibrationManager {
       measuredAt: new Date(),
       confidence
     })
-
-    console.log(`🎧 Hearing threshold set: ${frequency}Hz = ${clampedThreshold}dB SPL`)
   }
 
   // 聴力閾値の取得
@@ -213,7 +210,6 @@ class AudioCalibrationManager {
   // デバイス固有キャリブレーション
   setDeviceCalibration(deviceId: string, offsetDb: number): void {
     this.deviceCalibration.set(deviceId, offsetDb)
-    console.log(`📱 Device calibration set: ${deviceId} = ${offsetDb}dB offset`)
   }
 
   getDeviceCalibration(deviceId: string): number {
@@ -282,7 +278,6 @@ class AudioCalibrationManager {
       })
     }
 
-    console.log('📊 Calibration data imported successfully')
   }
 
   // キャリブレーション状態のリセット
@@ -290,7 +285,6 @@ class AudioCalibrationManager {
     this.hearingThresholds.clear()
     this.deviceCalibration.clear()
     this.config = { ...DEFAULT_CALIBRATION }
-    console.log('🔄 Calibration data reset')
   }
 }
 
@@ -320,13 +314,9 @@ export function checkVolumeSafety(dbSpl: number) {
 
 // H-BAT特化の便利関数
 export function setupHBatCalibration(thresholds: { frequency: number; threshold: number }[]): void {
-  console.log('🎵 Setting up H-BAT calibration...')
-  
   thresholds.forEach(({ frequency, threshold }) => {
     setHearingThreshold(frequency, threshold, 1.0)
   })
-
-  console.log(`✅ H-BAT calibration complete: ${thresholds.length} frequencies`)
 }
 
 export function getHBatTestVolumes(): {

@@ -12,10 +12,10 @@ export interface AudioPermissionState {
   error: string | null
 }
 
-// ユーザー操作の種類
+// ユーザージェスチャーの種類
 export type UserGestureType = 'click' | 'touch' | 'keypress' | 'mousedown' | 'touchstart'
 
-// 音響権限マネージャー
+// 音響権限管理クラス
 class AudioPermissionManager {
   private state: AudioPermissionState = {
     hasUserGesture: false,
@@ -31,23 +31,22 @@ class AudioPermissionManager {
   private isListening = false
 
   constructor() {
-    this.updateContextState()
-    this.setupAutoplayDetection()
+    if (typeof window !== 'undefined') {
+      this.updateContextState()
+      this.setupAutoplayDetection()
+    }
   }
 
-  // 音響コンテキストの状態を更新
+  // コンテキスト状態の更新
   private updateContextState(): void {
     if (typeof window !== 'undefined' && Tone.context) {
       this.state.contextState = Tone.context.state
     }
   }
 
-  // 自動再生の検出
+  // 自動再生検出の設定
   private async setupAutoplayDetection(): Promise<void> {
-    if (typeof window === 'undefined') return
-
     try {
-      // 小さな無音ファイルで自動再生テスト
       const testAudio = new Audio()
       testAudio.volume = 0
       testAudio.muted = true
@@ -57,11 +56,9 @@ class AudioPermissionManager {
       if (playPromise) {
         await playPromise
         this.state.autoplayAllowed = true
-        console.log('✅ Autoplay is allowed')
       }
-    } catch (error) {
+    } catch {
       this.state.autoplayAllowed = false
-      console.log('⚠️ Autoplay is blocked')
     }
   }
 
@@ -81,7 +78,6 @@ class AudioPermissionManager {
     })
 
     this.isListening = true
-    console.log('👂 Listening for user gestures...')
   }
 
   // ユーザージェスチャーのリスナーを停止
@@ -97,13 +93,10 @@ class AudioPermissionManager {
 
     this.gestureListeners.clear()
     this.isListening = false
-    console.log('🔇 Stopped listening for user gestures')
   }
 
   // ユーザージェスチャーの処理
-  private async handleUserGesture(event: Event, gestureType: UserGestureType): Promise<void> {
-    console.log(`👆 User gesture detected: ${gestureType}`)
-    
+  private async handleUserGesture(_event: Event, _gestureType: UserGestureType): Promise<void> {
     this.state.lastUserInteraction = new Date()
     this.state.hasUserGesture = true
     this.state.error = null
@@ -122,7 +115,6 @@ class AudioPermissionManager {
     try {
       if (Tone.context.state !== 'running') {
         await Tone.start()
-        console.log('🎵 Audio context started successfully')
       }
 
       this.updateContextState()
@@ -137,8 +129,6 @@ class AudioPermissionManager {
 
   // 手動での音響開始要求
   async requestAudioPermission(): Promise<boolean> {
-    console.log('🎵 Requesting audio permission...')
-
     if (!this.state.hasUserGesture) {
       console.warn('⚠️ No user gesture detected. Audio start may fail.')
     }
@@ -147,7 +137,6 @@ class AudioPermissionManager {
       const success = await this.attemptAudioStart()
       
       if (success) {
-        console.log('✅ Audio permission granted')
         return true
       } else {
         console.error('❌ Audio permission denied')
@@ -218,7 +207,7 @@ class AudioPermissionManager {
     
     return {
       hasWebAudio: 'AudioContext' in window || 'webkitAudioContext' in window,
-      hasAudioContext: !!window.AudioContext || !!(window as any).webkitAudioContext,
+      hasAudioContext: !!window.AudioContext || !!((window as unknown as { webkitAudioContext?: AudioContext }).webkitAudioContext),
       hasMediaDevices: 'mediaDevices' in navigator,
       supportedCodecs: this.getSupportedAudioCodecs(),
       browserInfo: {
@@ -262,7 +251,6 @@ class AudioPermissionManager {
     }
     
     this.stopListeningForUserGesture()
-    console.log('🔄 Audio permission state reset')
   }
 
   // 音響権限の診断
@@ -364,8 +352,6 @@ export async function ensureHBatAudioReady(): Promise<{
   issues: string[]
   recommendations: string[]
 }> {
-  console.log('🎵 Checking H-BAT audio readiness...')
-  
   const permissionState = getAudioPermissionState()
   const diagnosis = diagnoseAudioIssues()
   
@@ -390,7 +376,7 @@ export async function ensureHBatAudioReady(): Promise<{
   )
 
   if (isReady) {
-    console.log('✅ H-BAT audio is ready')
+    console.warn('✅ H-BAT audio is ready')
   } else {
     console.warn('⚠️ H-BAT audio not ready:', hbatIssues)
   }
