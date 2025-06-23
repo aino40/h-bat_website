@@ -138,7 +138,37 @@ interface StaircaseStore {
     totalReversals: number
     duration: number
   }) => void
+
+  // BFIT専用機能
+  recordBFITTrial: (trial: {
+    sessionId: string
+    trialIndex: number
+    slopeK: number
+    direction: 'accelerando' | 'ritardando'
+    userAnswer: 'accelerando' | 'ritardando'
+    correct: boolean
+    reactionTime?: number
+    ioiSequence: number[]
+    patternId: string
+    soundLevel: number
+    isReversal: boolean
+    timestamp: Date
+  }) => void
+  setBFITResult: (result: {
+    sessionId: string
+    slopeThreshold: number
+    confidence: number
+    directionAccuracy: {
+      overall: { accuracy: number; totalTrials: number }
+      accelerando: { accuracy: number; totalTrials: number }
+      ritardando: { accuracy: number; totalTrials: number }
+    }
+    totalTrials: number
+    totalReversals: number
+    duration: number
+  }) => void
   getHearingThresholdAverage: () => number
+  getAverageHearingThreshold: () => number
   completeTest: (testType: TestType) => Promise<void>
   
   // 進行状況
@@ -584,7 +614,31 @@ export const useStaircaseStore = create<StaircaseStore>()(
           // TODO: Supabaseに結果保存を実装
         },
 
+        // BFIT専用機能
+        recordBFITTrial: (trial) => {
+          console.warn('Recording BFIT trial:', trial)
+          // TODO: Supabaseにデータ保存を実装
+        },
+
+        setBFITResult: (result) => {
+          console.warn('Setting BFIT result:', result)
+          // TODO: Supabaseに結果保存を実装
+        },
+
         getHearingThresholdAverage: () => {
+          const { currentSession } = get()
+          if (!currentSession || !currentSession.hearingTest.isCompleted) {
+            return 70 // デフォルト値
+          }
+
+          const results = Array.from(currentSession.hearingTest.results.values())
+          if (results.length === 0) return 70
+
+          const totalThreshold = results.reduce((sum, result) => sum + result.threshold, 0)
+          return totalThreshold / results.length
+        },
+
+        getAverageHearingThreshold: () => {
           const { currentSession } = get()
           if (!currentSession || !currentSession.hearingTest.isCompleted) {
             return 70 // デフォルト値
