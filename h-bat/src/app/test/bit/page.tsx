@@ -71,7 +71,7 @@ export default function BITTestPage() {
           direction: trial.direction,
           userAnswer: trial.userAnswer,
           correct: trial.correct,
-          reactionTime: trial.reactionTime ?? undefined,
+          ...(trial.reactionTime !== undefined && { reactionTime: trial.reactionTime }),
           ioiSequence: trial.ioiSequence,
           soundLevel: trial.soundLevel,
           isReversal: trial.isReversal,
@@ -87,7 +87,20 @@ export default function BITTestPage() {
           sessionId: currentSession?.sessionId || '',
           slopeThreshold: result.slopeThreshold,
           confidence: result.convergenceAnalysis.confidence,
-          directionAccuracy: result.directionAccuracy,
+          directionAccuracy: {
+            overall: { 
+              accuracy: result.directionAccuracy.overall.accuracy, 
+              totalTrials: result.directionAccuracy.overall.total 
+            },
+            accelerando: { 
+              accuracy: result.directionAccuracy.accelerando.accuracy, 
+              totalTrials: result.directionAccuracy.accelerando.total 
+            },
+            ritardando: { 
+              accuracy: result.directionAccuracy.ritardando.accuracy, 
+              totalTrials: result.directionAccuracy.ritardando.total 
+            }
+          },
           totalTrials: result.totalTrials,
           totalReversals: result.totalReversals,
           duration: result.duration
@@ -499,36 +512,69 @@ export default function BITTestPage() {
   // テスト実行状態
   if (pageState === 'testing') {
     return (
-      <BITTestScreen
-        config={{
-          sessionId: currentSession?.sessionId || '',
-          profileId: currentSession?.profileId || '',
-          hearingThreshold,
-          onTrialComplete: (trial: BITTrial) => {
-            try {
-              recordBITTrial(trial)
-            } catch (err) {
-              console.error('Failed to record BIT trial:', err)
-            }
-          },
-          onTestComplete: (result: BITResult) => {
-            try {
-              setBITResult(result)
-              setPageState('results')
-            } catch (err) {
-              console.error('Failed to save BIT result:', err)
-              setError('結果の保存に失敗しました')
+              <BITTestScreen
+          config={{
+            sessionId: currentSession?.sessionId || '',
+            profileId: currentSession?.profileId || '',
+            hearingThreshold,
+            onTrialComplete: (trial: BITTrial) => {
+              try {
+                recordBITTrial({
+                  sessionId: currentSession?.sessionId || '',
+                  trialIndex: trial.trialIndex,
+                  slopeK: trial.slopeK,
+                  direction: trial.direction,
+                  userAnswer: trial.userAnswer,
+                  correct: trial.correct,
+                  ...(trial.reactionTime !== undefined && { reactionTime: trial.reactionTime }),
+                  ioiSequence: trial.ioiSequence,
+                  soundLevel: trial.soundLevel,
+                  isReversal: trial.isReversal,
+                  timestamp: trial.timestamp
+                })
+              } catch (err) {
+                console.error('Failed to record BIT trial:', err)
+              }
+            },
+            onTestComplete: (result: BITResult) => {
+              try {
+                setBITResult({
+                  sessionId: currentSession?.sessionId || '',
+                  slopeThreshold: result.slopeThreshold,
+                  confidence: result.convergenceAnalysis.confidence,
+                  directionAccuracy: {
+                    overall: { 
+                      accuracy: result.directionAccuracy.overall.accuracy, 
+                      totalTrials: result.directionAccuracy.overall.total 
+                    },
+                    accelerando: { 
+                      accuracy: result.directionAccuracy.accelerando.accuracy, 
+                      totalTrials: result.directionAccuracy.accelerando.total 
+                    },
+                    ritardando: { 
+                      accuracy: result.directionAccuracy.ritardando.accuracy, 
+                      totalTrials: result.directionAccuracy.ritardando.total 
+                    }
+                  },
+                  totalTrials: result.totalTrials,
+                  totalReversals: result.totalReversals,
+                  duration: result.duration
+                })
+                setPageState('results')
+              } catch (err) {
+                console.error('Failed to save BIT result:', err)
+                setError('結果の保存に失敗しました')
+                setPageState('error')
+              }
+            },
+            onError: (err: Error) => {
+              console.error('BIT test error:', err)
+              setError(err.message)
               setPageState('error')
             }
-          },
-          onError: (err: Error) => {
-            console.error('BIT test error:', err)
-            setError(err.message)
-            setPageState('error')
-          }
-        }}
-        onBack={() => setPageState('ready')}
-      />
+          }}
+          onBack={() => setPageState('ready')}
+        />
     )
   }
 
