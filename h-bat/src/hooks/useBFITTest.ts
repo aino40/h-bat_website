@@ -488,7 +488,9 @@ function calculateDirectionConsistency(trials: BFITTrial[]): number {
   // 連続する試行での一貫性を計算
   let consistentCount = 0
   for (let i = 1; i < trials.length; i++) {
-    if (trials[i].correct === trials[i-1].correct) {
+    const currentTrial = trials[i]
+    const previousTrial = trials[i-1]
+    if (currentTrial && previousTrial && currentTrial.correct === previousTrial.correct) {
       consistentCount++
     }
   }

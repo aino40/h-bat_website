@@ -2,6 +2,9 @@
 
 import * as Tone from 'tone'
 
+// Import BFITTrial and BFITResult from staircase controller
+import { BFITTrial, BFITResult } from '@/lib/bfit/staircaseController'
+
 // BFIT設定インターフェース
 export interface BFITConfig {
   sessionId: string
@@ -10,12 +13,12 @@ export interface BFITConfig {
   baseTempo: number // 基準テンポ (BPM)
   patternDuration: number // パターン再生時間 (秒)
   repetitions: number // パターン反復回数
-  onTrialComplete?: (trial: BFITTrialData) => void
+  onTrialComplete?: (trial: BFITTrial) => void
   onTestComplete?: (result: BFITResult) => void
   onError?: (error: Error) => void
 }
 
-// BFIT試行データ
+// BFIT試行データ（レガシー用、新しいコードはBFITTrialを使用）
 export interface BFITTrialData {
   trialIndex: number
   patternId: string
@@ -28,15 +31,6 @@ export interface BFITTrialData {
   patternNotes: BFITNote[]
   soundLevel: number
   timestamp: Date
-}
-
-// BFIT結果データ
-export interface BFITResult {
-  slopeThreshold: number
-  totalTrials: number
-  accuracy: number
-  reactionTimes: number[]
-  duration: number
 }
 
 // BFIT音符データ
@@ -327,42 +321,4 @@ export function calculateBFITProgress(
     overallProgress,
     estimatedRemainingTrials
   }
-}
-
-// BFIT品質評価
-export function evaluateBFITQuality(result: BFITResult): {
-  grade: 'A' | 'B' | 'C' | 'D' | 'F'
-  score: number
-  feedback: string
-} {
-  const { slopeThreshold, accuracy, totalTrials } = result
-
-  // 閾値とアキュラシーから総合スコアを計算
-  const thresholdScore = Math.max(0, 100 - (slopeThreshold * 10)) // 低い閾値ほど高スコア
-  const accuracyScore = accuracy * 100
-  const trialScore = Math.min(totalTrials / 20, 1) * 100 // 試行数ボーナス
-
-  const totalScore = (thresholdScore * 0.5 + accuracyScore * 0.4 + trialScore * 0.1)
-
-  let grade: 'A' | 'B' | 'C' | 'D' | 'F'
-  let feedback: string
-
-  if (totalScore >= 90) {
-    grade = 'A'
-    feedback = '優秀な複雑リズム知覚能力です'
-  } else if (totalScore >= 80) {
-    grade = 'B'
-    feedback = '良好な複雑リズム知覚能力です'
-  } else if (totalScore >= 70) {
-    grade = 'C'
-    feedback = '平均的な複雑リズム知覚能力です'
-  } else if (totalScore >= 60) {
-    grade = 'D'
-    feedback = '複雑リズム知覚能力に改善の余地があります'
-  } else {
-    grade = 'F'
-    feedback = '複雑リズム知覚能力の向上が必要です'
-  }
-
-  return { grade, score: Math.round(totalScore), feedback }
 } 
