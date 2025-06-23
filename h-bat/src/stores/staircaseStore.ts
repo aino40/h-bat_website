@@ -87,6 +87,32 @@ interface StaircaseStore {
   getTestResult: (testType: TestType) => StaircaseResult | null
   getAllResults: () => { [key in TestType]?: StaircaseResult }
   
+  // BST専用機能
+  recordBSTTrial: (trial: {
+    sessionId: string
+    trialIndex: number
+    volumeDifference: number
+    patternType: '2beat' | '3beat'
+    userAnswer: '2beat' | '3beat'
+    correct: boolean
+    reactionTime?: number
+    strongBeatLevel: number
+    weakBeatLevel: number
+    isReversal: boolean
+    timestamp: Date
+  }) => void
+  setBSTResult: (result: {
+    sessionId: string
+    volumeDifferenceThreshold: number
+    confidence: number
+    accuracy: number
+    totalTrials: number
+    totalReversals: number
+    duration: number
+  }) => void
+  getHearingThresholdAverage: () => number
+  completeTest: (testType: TestType) => Promise<void>
+  
   // 進行状況
   getProgress: () => {
     reversalProgress: number
@@ -506,6 +532,61 @@ export const useStaircaseStore = create<StaircaseStore>()(
           const config = currentController.getDebugInfo().config
 
           return calculateStaircaseProgress(state, config)
+        },
+
+        // BST専用機能
+        recordBSTTrial: (trial) => {
+          console.warn('Recording BST trial:', trial)
+          // TODO: Supabaseにデータ保存を実装
+        },
+
+        setBSTResult: (result) => {
+          console.warn('Setting BST result:', result)
+          // TODO: Supabaseに結果保存を実装
+        },
+
+        getHearingThresholdAverage: () => {
+          const { currentSession } = get()
+          if (!currentSession || !currentSession.hearingTest.isCompleted) {
+            return 70 // デフォルト値
+          }
+
+          const results = Array.from(currentSession.hearingTest.results.values())
+          if (results.length === 0) return 70
+
+          const totalThreshold = results.reduce((sum, result) => sum + result.threshold, 0)
+          return totalThreshold / results.length
+        },
+
+        completeTest: async (testType: TestType) => {
+          const { currentSession } = get()
+          if (!currentSession) return
+
+          set((state) => {
+            if (!state.currentSession) return state
+
+            const updatedSession = { ...state.currentSession }
+            
+            switch (testType) {
+              case 'bst':
+                updatedSession.bstTest.isCompleted = true
+                break
+              case 'bit':
+                updatedSession.bitTest.isCompleted = true
+                break
+              case 'bfit':
+                updatedSession.bfitTest.isCompleted = true
+                break
+              case 'hearing':
+                updatedSession.hearingTest.isCompleted = true
+                break
+            }
+
+            return {
+              ...state,
+              currentSession: updatedSession
+            }
+          })
         },
 
         // リセット

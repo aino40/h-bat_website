@@ -76,7 +76,7 @@ export default function HearingTestPage() {
   // 設定ハンドラー
   const handleSettings = () => {
     // 設定画面を開く（将来の実装）
-    console.log('Settings clicked')
+    console.warn('Settings clicked')
   }
 
   // 戻るハンドラー
