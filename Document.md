@@ -91,11 +91,11 @@
 - [x] **I-5** BST結果データ保存・可視化
 
 ### J BIT（Beat Interval Test）実装
-- [ ] **J-1** IOI線形変化アルゴリズム実装
-- [ ] **J-2** Accelerando/Ritardando音源生成
-- [ ] **J-3** テンポ方向判定UI・ボタンインタラクション
-- [ ] **J-4** BIT測定制御・ステアケース連携
-- [ ] **J-5** BIT結果データ保存・可視化
+- [x] **J-1** IOI線形変化アルゴリズム実装
+- [x] **J-2** Accelerando/Ritardando音源生成
+- [x] **J-3** テンポ方向判定UI・ボタンインタラクション
+- [x] **J-4** BIT測定制御・ステアケース連携
+- [x] **J-5** BIT結果データ保存・可視化
 
 ### K BFIT（Beat Finding & Interval Test）実装
 - [ ] **K-1** 複雑リズムパターン（不等間隔8音符）実装

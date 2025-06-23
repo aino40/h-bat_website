@@ -110,6 +110,34 @@ interface StaircaseStore {
     totalReversals: number
     duration: number
   }) => void
+
+  // BIT専用機能
+  recordBITTrial: (trial: {
+    sessionId: string
+    trialIndex: number
+    slopeK: number
+    direction: 'accelerando' | 'ritardando'
+    userAnswer: 'accelerando' | 'ritardando'
+    correct: boolean
+    reactionTime?: number
+    ioiSequence: number[]
+    soundLevel: number
+    isReversal: boolean
+    timestamp: Date
+  }) => void
+  setBITResult: (result: {
+    sessionId: string
+    slopeThreshold: number
+    confidence: number
+    directionAccuracy: {
+      overall: { accuracy: number; totalTrials: number }
+      accelerando: { accuracy: number; totalTrials: number }
+      ritardando: { accuracy: number; totalTrials: number }
+    }
+    totalTrials: number
+    totalReversals: number
+    duration: number
+  }) => void
   getHearingThresholdAverage: () => number
   completeTest: (testType: TestType) => Promise<void>
   
@@ -542,6 +570,17 @@ export const useStaircaseStore = create<StaircaseStore>()(
 
         setBSTResult: (result) => {
           console.warn('Setting BST result:', result)
+          // TODO: Supabaseに結果保存を実装
+        },
+
+        // BIT専用機能
+        recordBITTrial: (trial) => {
+          console.warn('Recording BIT trial:', trial)
+          // TODO: Supabaseにデータ保存を実装
+        },
+
+        setBITResult: (result) => {
+          console.warn('Setting BIT result:', result)
           // TODO: Supabaseに結果保存を実装
         },
 
