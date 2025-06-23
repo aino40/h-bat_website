@@ -169,8 +169,8 @@ export function useBFITTest(config: BFITTestConfig) {
       const direction = Math.random() > 0.5 ? 'accelerando' : 'ritardando'
       const currentSlopeK = staircaseControllerRef.current.getCurrentSlopeK()
 
-      // パターン生成
-      const { pattern, ioiSequence } = audioGeneratorRef.current.generatePattern(
+      // Generate pattern for current trial
+      const _pattern = audioGeneratorRef.current.generatePattern(
         currentSlopeK,
         direction,
         'default'
@@ -180,7 +180,7 @@ export function useBFITTest(config: BFITTestConfig) {
       currentTrialRef.current = {
         direction,
         startTime: Date.now(),
-        ioiSequence,
+        ioiSequence: _pattern.ioiSequence,
         patternId: 'default'
       }
 

@@ -141,7 +141,6 @@ export default function BFITTestPage() {
   // テスト開始
   const handleStartTest = () => {
     setPageState('testing')
-    startNextTrial()
   }
 
   // 戻る

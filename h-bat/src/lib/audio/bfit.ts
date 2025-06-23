@@ -83,7 +83,7 @@ export function calculateIOISequence(
 }
 
 // パターンIDからリズムパターンを取得
-export function getRhythmPattern(patternId: string): BFITNote[] {
+export function getRhythmPattern(_patternId: string): BFITNote[] {
   // 現在は1つのパターンのみサポート
   return BFIT_RHYTHM_PATTERN
 }
@@ -170,9 +170,9 @@ export class BFITAudioGenerator {
   generatePattern(
     slopeK: number,
     direction: 'accelerando' | 'ritardando',
-    patternId: string = 'default'
+    _patternId: string = 'default'
   ): { pattern: BFITNote[], ioiSequence: number[] } {
-    const pattern = getRhythmPattern(patternId)
+    const pattern = getRhythmPattern(_patternId)
     const baseIOI = tempoToIOI(this.config.baseTempo)
     const ioiSequence = calculateIOISequence(baseIOI, slopeK, direction, pattern.length)
 

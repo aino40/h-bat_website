@@ -16,9 +16,9 @@ import {
   Search,
   Music
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
+import { Button } from '@/components/ui/Button'
+import { Card, CardContent } from '@/components/ui/Card'
+import { Progress } from '@/components/ui/Progress'
 import { BFITAudioGenerator, BFITConfig } from '@/lib/audio/bfit'
 import { BFITTrial } from '@/lib/bfit/staircaseController'
 
@@ -266,7 +266,7 @@ export default function BFITTestScreen({ config, onBack }: BFITTestScreenProps) 
               <span>試行 {currentTrial} / {totalTrials}</span>
               <span>正答率: {Math.round(progress.accuracy * 100)}%</span>
             </div>
-            <Progress value={(currentTrial / totalTrials) * 100} className="h-2" />
+            <Progress value={(currentTrial / totalTrials) * 100} max={100} className="h-2" />
           </div>
         </div>
       </header>
