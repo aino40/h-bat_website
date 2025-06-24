@@ -94,7 +94,7 @@ export function ioiToTempo(ioi: number): number {
 
 // BFIT音響生成クラス
 export class BFITAudioGenerator {
-  private sampler: Tone.Sampler | null = null
+  private snareSynth: Tone.NoiseSynth | null = null
   private part: Tone.Part | null = null
   private isInitialized = false
   private config: BFITConfig
@@ -115,23 +115,22 @@ export class BFITAudioGenerator {
         await Tone.start()
       }
 
-      // Snareサンプラー作成（BFITはSnareのみ使用）
-      this.sampler = new Tone.Sampler({
-        urls: {
-          'C4': '/audio/snare.wav'
+      // Snare合成音源作成（BFITはSnareのみ使用）
+      this.snareSynth = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
         },
-        baseUrl: '',
-        onload: () => {
-          // BFIT: Snare sample loaded
+        envelope: {
+          attack: 0.001,
+          decay: 0.2,
+          sustain: 0,
+          release: 0.2
         }
       }).toDestination()
 
-      // サンプル読み込み完了を待機
-      await this.waitForSamplerLoad()
-
       // 音量設定（聴力閾値+30dB）
       const targetLevel = this.config.hearingThreshold + 30
-      this.sampler.volume.value = this.dbToGain(targetLevel)
+      this.snareSynth.volume.value = this.dbToGain(targetLevel)
 
       this.isInitialized = true
       // BFIT: Audio generator initialized
@@ -141,19 +140,7 @@ export class BFITAudioGenerator {
     }
   }
 
-  // サンプラー読み込み完了を待機
-  private async waitForSamplerLoad(): Promise<void> {
-    return new Promise((resolve) => {
-      const checkLoaded = () => {
-        if (this.sampler?.loaded) {
-          resolve()
-        } else {
-          setTimeout(checkLoaded, 100)
-        }
-      }
-      checkLoaded()
-    })
-  }
+
 
   // dBからゲインに変換
   private dbToGain(db: number): number {
@@ -210,7 +197,7 @@ export class BFITAudioGenerator {
 
   // パターンを再生
   async playPattern(): Promise<void> {
-    if (!this.isInitialized || !this.sampler) {
+    if (!this.isInitialized || !this.snareSynth) {
       throw new Error('BFIT: Audio generator not initialized')
     }
 
@@ -223,8 +210,8 @@ export class BFITAudioGenerator {
 
       // 新しいパートを作成
       this.part = new Tone.Part((time, note: BFITNote) => {
-        if (this.sampler) {
-          this.sampler.triggerAttackRelease('C4', note.duration, time, note.velocity)
+        if (this.snareSynth) {
+          this.snareSynth.triggerAttackRelease(note.duration, time)
         }
       }, this.currentPattern)
 
@@ -262,8 +249,8 @@ export class BFITAudioGenerator {
 
   // 音量設定
   setVolume(dbLevel: number): void {
-    if (this.sampler) {
-      this.sampler.volume.value = this.dbToGain(dbLevel)
+    if (this.snareSynth) {
+      this.snareSynth.volume.value = this.dbToGain(dbLevel)
     }
   }
 
@@ -285,9 +272,9 @@ export class BFITAudioGenerator {
         this.part = null
       }
       
-      if (this.sampler) {
-        this.sampler.dispose()
-        this.sampler = null
+      if (this.snareSynth) {
+        this.snareSynth.dispose()
+        this.snareSynth = null
       }
       
       this.isInitialized = false

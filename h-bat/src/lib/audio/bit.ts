@@ -82,8 +82,8 @@ export function detectTempoDirection(ioiSequence: number[]): 'accelerando' | 'ri
 
 // BIT音源生成クラス
 export class BITAudioGenerator {
-  private kickSampler: Tone.Sampler | null = null
-  private snareSampler: Tone.Sampler | null = null
+  private kickSynth: Tone.MembraneSynth | null = null
+  private snareSynth: Tone.NoiseSynth | null = null
   private part: Tone.Part | null = null
   private isInitialized = false
   private config: BITConfig
@@ -103,44 +103,29 @@ export class BITAudioGenerator {
         await Tone.start()
       }
 
-      // サンプラー初期化
-      this.kickSampler = new Tone.Sampler({
-        urls: {
-          C3: '/audio/kick.wav'
+      // 合成音源初期化
+      this.kickSynth = new Tone.MembraneSynth({
+        envelope: {
+          attack: 0.001,
+          decay: 0.3,
+          sustain: 0,
+          release: 0.3
         },
         volume: this.dbToGain(this.config.soundLevel)
       }).toDestination()
 
-      this.snareSampler = new Tone.Sampler({
-        urls: {
-          C3: '/audio/snare.wav'
+      this.snareSynth = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
+        },
+        envelope: {
+          attack: 0.001,
+          decay: 0.2,
+          sustain: 0,
+          release: 0.2
         },
         volume: this.dbToGain(this.config.soundLevel)
       }).toDestination()
-
-      // サンプルロード待機
-      await Promise.all([
-        new Promise<void>(resolve => {
-          const checkKickLoaded = () => {
-            if (this.kickSampler!.loaded) {
-              resolve()
-            } else {
-              setTimeout(checkKickLoaded, 100)
-            }
-          }
-          checkKickLoaded()
-        }),
-        new Promise<void>(resolve => {
-          const checkSnareLoaded = () => {
-            if (this.snareSampler!.loaded) {
-              resolve()
-            } else {
-              setTimeout(checkSnareLoaded, 100)
-            }
-          }
-          checkSnareLoaded()
-        })
-      ])
 
       this.isInitialized = true
     } catch (error) {
@@ -162,11 +147,11 @@ export class BITAudioGenerator {
 
   // 音圧レベル更新
   private updateSoundLevel(): void {
-    if (this.kickSampler) {
-      this.kickSampler.volume.value = this.dbToGain(this.config.soundLevel)
+    if (this.kickSynth) {
+      this.kickSynth.volume.value = this.dbToGain(this.config.soundLevel)
     }
-    if (this.snareSampler) {
-      this.snareSampler.volume.value = this.dbToGain(this.config.soundLevel)
+    if (this.snareSynth) {
+      this.snareSynth.volume.value = this.dbToGain(this.config.soundLevel)
     }
   }
 
@@ -199,7 +184,7 @@ export class BITAudioGenerator {
 
   // BITパターン再生
   async playPattern(): Promise<void> {
-    if (!this.isInitialized || !this.kickSampler || !this.snareSampler) {
+    if (!this.isInitialized || !this.kickSynth || !this.snareSynth) {
       throw new Error('BIT audio generator not initialized')
     }
 
@@ -227,8 +212,11 @@ export class BITAudioGenerator {
 
     this.part = new Tone.Part((time, event) => {
       // キックとスネアを交互に再生
-      const sampler = event.index % 2 === 0 ? this.kickSampler : this.snareSampler
-      sampler?.triggerAttackRelease('C3', '8n', time)
+      if (event.index % 2 === 0) {
+        this.kickSynth?.triggerAttackRelease('C2', '8n', time)
+      } else {
+        this.snareSynth?.triggerAttackRelease('8n', time)
+      }
     }, events)
 
     // 再生開始
@@ -265,13 +253,13 @@ export class BITAudioGenerator {
   dispose(): void {
     this.stopPattern()
     
-    if (this.kickSampler) {
-      this.kickSampler.dispose()
-      this.kickSampler = null
+    if (this.kickSynth) {
+      this.kickSynth.dispose()
+      this.kickSynth = null
     }
-    if (this.snareSampler) {
-      this.snareSampler.dispose()
-      this.snareSampler = null
+    if (this.snareSynth) {
+      this.snareSynth.dispose()
+      this.snareSynth = null
     }
     
     this.isInitialized = false
