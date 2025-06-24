@@ -261,12 +261,30 @@ export default function BSTTestPage() {
     stopAudio,
     submitAnswer,
     getResult,
+    getDebugInfo,
     canPlay,
     canAnswer,
     isPlaying,
     isCompleted,
     hasError
   } = useBSTTest(testConfig)
+
+  // デバッグ情報（開発環境のみ）
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('BST State:', {
+        state,
+        canPlay,
+        canAnswer,
+        isPlaying,
+        isCompleted,
+        hasError,
+        currentTrial,
+        progress,
+        debugInfo: getDebugInfo?.()
+      })
+    }
+  }, [state, canPlay, canAnswer, isPlaying, isCompleted, hasError, currentTrial, progress, getDebugInfo])
 
   // テスト完了処理
   useEffect(() => {

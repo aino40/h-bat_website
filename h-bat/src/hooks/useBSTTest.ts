@@ -184,7 +184,12 @@ export function useBSTTest(config: BSTTestConfig) {
     const audioGenerator = audioGeneratorRef.current
     const staircaseController = staircaseControllerRef.current
 
-    if (!audioGenerator || !staircaseController || state !== 'ready') {
+    if (!audioGenerator || !staircaseController) {
+      return
+    }
+
+    // 状態が初期化中やエラー状態の場合は実行しない
+    if (state === 'initializing' || state === 'error' || state === 'completed') {
       return
     }
 
@@ -304,8 +309,12 @@ export function useBSTTest(config: BSTTestConfig) {
         if (staircaseController.isConverged()) {
           setState('completed')
         } else {
-          // 次の試行開始
-          startTrial()
+          // 次の試行開始（状態をreadyに戻してから）
+          setState('ready')
+          // 少し遅延してstartTrialを呼ぶ
+          setTimeout(() => {
+            startTrial()
+          }, 100)
         }
       }, 1500)
 
