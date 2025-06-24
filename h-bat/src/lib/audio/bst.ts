@@ -42,7 +42,7 @@ export const BEAT_PATTERNS: Record<'2beat' | '3beat', BeatPattern> = {
 
 // BST音響ジェネレータークラス
 export class BSTAudioGenerator {
-  private snarePlayer: Tone.Player | null = null
+  private snarePlayer: Tone.NoiseSynth | null = null
   private part: Tone.Part | null = null
   private isLoaded: boolean = false
   private config: BSTConfig
@@ -60,16 +60,8 @@ export class BSTAudioGenerator {
         await Tone.start()
       }
 
-      // Snareサンプルロード
-      this.snarePlayer = new Tone.Player({
-        url: '/audio/snare.wav',
-        volume: this.dbToGain(this.config.strongBeatLevel),
-        fadeIn: this.config.fadeTime / 1000,
-        fadeOut: this.config.fadeTime / 1000
-      }).toDestination()
-
-      // ロード完了を待機
-      await Tone.loaded()
+      // Snare音源を合成音で作成（外部ファイル不要）
+      this.snarePlayer = this.createSynthSnare()
       this.isLoaded = true
 
       // テンポ設定
@@ -79,6 +71,22 @@ export class BSTAudioGenerator {
       console.error('BST audio initialization failed:', error)
       throw new Error('Failed to initialize BST audio system')
     }
+  }
+
+  // 合成スネアドラム音を作成
+  private createSynthSnare(): Tone.NoiseSynth {
+    return new Tone.NoiseSynth({
+      noise: {
+        type: 'white'
+      },
+      envelope: {
+        attack: 0.001,
+        decay: 0.2,
+        sustain: 0,
+        release: 0.2
+      },
+      volume: this.dbToGain(this.config.strongBeatLevel)
+    }).toDestination()
   }
 
   // 拍子パターン設定
@@ -116,8 +124,8 @@ export class BSTAudioGenerator {
         const volume = this.calculateBeatVolume(event.beatType)
         this.snarePlayer!.volume.setValueAtTime(volume, time)
         
-        // 音再生
-        this.snarePlayer!.start(time)
+        // 音再生（NoiseSynthはtriggerAttackReleaseを使用）
+        this.snarePlayer!.triggerAttackRelease('8n', time)
       }, events)
 
       // ループ設定
