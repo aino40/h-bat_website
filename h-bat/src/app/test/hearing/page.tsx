@@ -73,16 +73,18 @@ export default function HearingTestPage() {
       
       saveHearingThresholds(thresholds)
       
-      // 次のテストに移動
+      // 次のテストに移動（BST画面へ）
       setTimeout(() => {
         completeCurrentStep({ 
           thresholds,
           allResults,
           completedAt: new Date().toISOString()
         })
+        // 直接BST画面に遷移
+        router.push('/test/bst')
       }, 3000)
     }
-  }, [state.isCompleted, allResults, saveHearingThresholds, completeCurrentStep])
+  }, [state.isCompleted, allResults, saveHearingThresholds, completeCurrentStep, router])
 
   // 応答ハンドラー
   const handleResponse = (heard: boolean) => {
@@ -181,7 +183,7 @@ export default function HearingTestPage() {
             <p className="text-gray-600 mb-4">
               次は拍子判別テスト（BST）に進みます...
             </p>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
               <motion.div
                 className="bg-green-500 h-2 rounded-full"
                 initial={{ width: 0 }}
@@ -189,6 +191,14 @@ export default function HearingTestPage() {
                 transition={{ duration: 3 }}
               />
             </div>
+            {/* 手動進行ボタン */}
+            <Button
+              onClick={() => router.push('/test/bst')}
+              className="w-full"
+              variant="outline"
+            >
+              BST テストに進む
+            </Button>
           </div>
         </Card>
       </div>
