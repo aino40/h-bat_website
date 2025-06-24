@@ -6,6 +6,8 @@ import { motion } from 'framer-motion'
 import HearingTestScreen from '@/components/test/HearingTestScreen'
 import { useHearingTest } from '@/hooks/useHearingTest'
 import { useStaircaseStore } from '@/stores/staircaseStore'
+import { useTestNavigation } from '@/hooks/useTestNavigation'
+import { TestProgress } from '@/components/navigation/TestProgress'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Headphones, AlertCircle, CheckCircle } from 'lucide-react'
@@ -14,6 +16,7 @@ import { Headphones, AlertCircle, CheckCircle } from 'lucide-react'
 export default function HearingTestPage() {
   const router = useRouter()
   const { currentSession, startTest } = useStaircaseStore()
+  const { steps, progress, completeCurrentStep, saveHearingThresholds } = useTestNavigation()
   const [sessionId, setSessionId] = useState<string>('')
   const [profileId, setProfileId] = useState<string>('')
   const [isReady, setIsReady] = useState(false)
@@ -60,12 +63,24 @@ export default function HearingTestPage() {
   // テスト完了処理
   useEffect(() => {
     if (state.isCompleted && allResults.length > 0) {
+      // 聴力閾値を保存
+      const thresholds = allResults.reduce((acc, result) => {
+        acc[`${result.frequency / 1000}kHz`] = result.thresholdDb
+        return acc
+      }, {} as Record<string, number>)
+      
+      saveHearingThresholds(thresholds)
+      
       // 次のテストに移動
       setTimeout(() => {
-        router.push('/test/bst')
+        completeCurrentStep({ 
+          thresholds,
+          allResults,
+          completedAt: new Date().toISOString()
+        })
       }, 3000)
     }
-  }, [state.isCompleted, allResults, router])
+  }, [state.isCompleted, allResults, saveHearingThresholds, completeCurrentStep])
 
   // 応答ハンドラー
   const handleResponse = (heard: boolean) => {
@@ -174,20 +189,39 @@ export default function HearingTestPage() {
 
   // メイン聴力測定画面
   return (
-    <HearingTestScreen
-      currentFrequency={state.currentFrequency}
-      currentLevel={state.currentLevel}
-      isPlaying={state.isPlaying}
-      isTestActive={state.isTestActive}
-      progress={state.progress}
-      onPlayTone={playTone}
-      onResponse={handleResponse}
-      onNextFrequency={moveToNextFrequency}
-      onPreviousFrequency={moveToPreviousFrequency}
-      onRestart={resetCurrentFrequency}
-      onSettings={handleSettings}
-      onBack={handleBack}
-      error={state.error}
-    />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid lg:grid-cols-4 gap-8">
+          {/* Progress Sidebar */}
+          <div className="lg:col-span-1">
+            <TestProgress
+              currentStep="hearing"
+              steps={steps}
+              totalProgress={progress}
+              showTimeEstimate={true}
+            />
+          </div>
+          
+          {/* Main Test Area */}
+          <div className="lg:col-span-3">
+            <HearingTestScreen
+              currentFrequency={state.currentFrequency}
+              currentLevel={state.currentLevel}
+              isPlaying={state.isPlaying}
+              isTestActive={state.isTestActive}
+              progress={state.progress}
+              onPlayTone={playTone}
+              onResponse={handleResponse}
+              onNextFrequency={moveToNextFrequency}
+              onPreviousFrequency={moveToPreviousFrequency}
+              onRestart={resetCurrentFrequency}
+              onSettings={handleSettings}
+              onBack={handleBack}
+              error={state.error}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   )
 } 

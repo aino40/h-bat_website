@@ -1,6 +1,7 @@
 // Basic UI Components
 export { Button, type ButtonProps } from './Button'
 export { Badge, type BadgeProps } from './badge'
+export { Checkbox } from './checkbox'
 export { 
   Card, 
   CardHeader, 
