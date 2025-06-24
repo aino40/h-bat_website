@@ -9,9 +9,9 @@ export interface TestSession {
   startedAt: string
   currentStep: string
   completedSteps: string[]
-  userInfo?: any
+  userInfo?: Record<string, unknown>
   hearingThresholds?: Record<string, number>
-  testResults?: Record<string, any>
+  testResults?: Record<string, unknown>
 }
 
 export function useTestNavigation() {
@@ -94,7 +94,7 @@ export function useTestNavigation() {
   }, [session, router, updateStepsStatus])
 
   // Complete current step and move to next
-  const completeCurrentStep = useCallback((testResults?: any) => {
+  const completeCurrentStep = useCallback((testResults?: Record<string, unknown>) => {
     if (!session) return
 
     const currentStepIndex = steps.findIndex(step => step.id === session.currentStep)
@@ -124,7 +124,7 @@ export function useTestNavigation() {
   }, [session, steps, router, updateStepsStatus, navigateToStep])
 
   // Save test result for current step
-  const saveTestResult = useCallback((stepId: string, result: any) => {
+  const saveTestResult = useCallback((stepId: string, result: Record<string, unknown>) => {
     if (!session) return
 
     const updatedSession = {

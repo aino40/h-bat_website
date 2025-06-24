@@ -194,7 +194,7 @@ export default function BFITTestScreen({ config, onBack }: BFITTestScreenProps) 
     if (isInitialized && currentTrial === 1) {
       generateAndPlayPattern()
     }
-  }, [isInitialized, currentTrial, generateAndPlayPattern])
+  }, [isInitialized, currentTrial, generateAndPlayPattern, audioGenerator, config])
 
   // エラー状態
   if (error) {

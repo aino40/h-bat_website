@@ -7,8 +7,24 @@ import { ArrowLeft, Download, Database, Calendar, FileText, Clock, RefreshCw } f
 import { useAuth } from '@/contexts/AuthContext'
 
 // Mock API functions for demonstration
+interface ExportConfig {
+  format: 'csv' | 'tsv'
+  dataTypes: string[]
+  startDate: string
+  endDate: string
+}
+
+interface ExportHistory {
+  id: string
+  filename: string
+  format: string
+  size: number
+  created_at: string
+  status: string
+}
+
 const ExportAPI = {
-  exportData: async (_config: any): Promise<Blob> => {
+  exportData: async (_config: ExportConfig): Promise<Blob> => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000))
     const csvContent = `session_id,created_at,age,gender
@@ -28,13 +44,13 @@ const ExportAPI = {
     URL.revokeObjectURL(url)
   },
   
-  generateFilename: (_config: any): string => {
+  generateFilename: (config: ExportConfig): string => {
     const date = new Date().toISOString().split('T')[0]
-    const dataTypesSuffix = _config.dataTypes.length === 3 ? 'all' : _config.dataTypes.join('-')
-    return `h-bat-export-${dataTypesSuffix}-${date}.${_config.format}`
+    const dataTypesSuffix = config.dataTypes.length === 3 ? 'all' : config.dataTypes.join('-')
+    return `h-bat-export-${dataTypesSuffix}-${date}.${config.format}`
   },
   
-  getExportHistory: async () => [
+  getExportHistory: async (): Promise<ExportHistory[]> => [
     {
       id: '1',
       filename: 'h-bat-export-all-2024-06-24.csv',
@@ -65,7 +81,7 @@ export default function AdminExportPage() {
   const { user, isAdmin, isLoading } = useAuth()
   const router = useRouter()
   
-  const [exportConfig, setExportConfig] = useState({
+  const [exportConfig, setExportConfig] = useState<ExportConfig>({
     format: 'csv',
     dataTypes: ['profiles', 'thresholds', 'trials'],
     startDate: '',
@@ -73,7 +89,7 @@ export default function AdminExportPage() {
   })
   
   const [isExporting, setIsExporting] = useState(false)
-  const [exportHistory, setExportHistory] = useState<any[]>([])
+  const [exportHistory, setExportHistory] = useState<ExportHistory[]>([])
   const [previewCount, setPreviewCount] = useState<number | null>(null)
 
   useEffect(() => {
@@ -249,7 +265,7 @@ export default function AdminExportPage() {
                         name="format"
                         value={key}
                         checked={exportConfig.format === key}
-                        onChange={(e) => setExportConfig(prev => ({ ...prev, format: e.target.value }))}
+                        onChange={(e) => setExportConfig(prev => ({ ...prev, format: e.target.value as 'csv' | 'tsv' }))}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                       />
                       <span className="ml-2 text-sm text-gray-700">{label}</span>

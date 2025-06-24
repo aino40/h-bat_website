@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Play, 
@@ -120,6 +120,23 @@ export default function BITTestScreen({
     }
   }, [config])
 
+  // テスト完了
+  const completeTest = useCallback(() => {
+    if (!staircaseController) return
+
+    try {
+      const result = staircaseController.getResult()
+      if (result) {
+        setTestState('completed')
+        config.onTestComplete(result)
+      }
+    } catch (err) {
+      console.error('Test completion failed:', err)
+      setError('テストの完了処理に失敗しました')
+      setTestState('error')
+    }
+  }, [staircaseController, config])
+
   // 進捗更新
   useEffect(() => {
     if (staircaseController) {
@@ -131,7 +148,7 @@ export default function BITTestScreen({
         completeTest()
       }
     }
-  }, [currentTrial, staircaseController, testState])
+  }, [currentTrial, staircaseController, testState, completeTest])
 
   // 音声再生
   const playAudio = async () => {
@@ -205,23 +222,6 @@ export default function BITTestScreen({
     } catch (err) {
       console.error('Trial recording failed:', err)
       setError('試行の記録に失敗しました')
-      setTestState('error')
-    }
-  }
-
-  // テスト完了
-  const completeTest = () => {
-    if (!staircaseController) return
-
-    try {
-      const result = staircaseController.getResult()
-      if (result) {
-        setTestState('completed')
-        config.onTestComplete(result)
-      }
-    } catch (err) {
-      console.error('Test completion failed:', err)
-      setError('テストの完了処理に失敗しました')
       setTestState('error')
     }
   }

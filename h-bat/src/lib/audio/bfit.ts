@@ -122,7 +122,7 @@ export class BFITAudioGenerator {
         },
         baseUrl: '',
         onload: () => {
-          console.log('BFIT: Snare sample loaded')
+          // BFIT: Snare sample loaded
         }
       }).toDestination()
 
@@ -134,7 +134,7 @@ export class BFITAudioGenerator {
       this.sampler.volume.value = this.dbToGain(targetLevel)
 
       this.isInitialized = true
-      console.log('BFIT: Audio generator initialized')
+      // BFIT: Audio generator initialized
     } catch (error) {
       console.error('BFIT: Failed to initialize audio generator:', error)
       throw error
@@ -239,7 +239,7 @@ export class BFITAudioGenerator {
       this.part.start(0)
       Tone.Transport.start()
 
-      console.log('BFIT: Pattern playback started')
+      // BFIT: Pattern playback started
     } catch (error) {
       console.error('BFIT: Failed to play pattern:', error)
       throw error
@@ -254,7 +254,7 @@ export class BFITAudioGenerator {
       }
       Tone.Transport.stop()
       Tone.Transport.cancel()
-      console.log('BFIT: Playback stopped')
+      // BFIT: Playback stopped
     } catch (error) {
       console.error('BFIT: Failed to stop playback:', error)
     }
@@ -291,7 +291,7 @@ export class BFITAudioGenerator {
       }
       
       this.isInitialized = false
-      console.log('BFIT: Audio generator disposed')
+      // BFIT: Audio generator disposed
     } catch (error) {
       console.error('BFIT: Failed to dispose audio generator:', error)
     }
