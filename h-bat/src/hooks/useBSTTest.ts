@@ -177,7 +177,7 @@ export function useBSTTest(config: BSTTestConfig) {
     } catch (err) {
       handleError(err as Error)
     }
-  }, [handleError])
+  }, [handleError, updateProgress])
 
   // 新しい試行開始
   const startTrial = useCallback(async () => {
@@ -346,9 +346,40 @@ export function useBSTTest(config: BSTTestConfig) {
           // 次の試行開始（状態をreadyに戻してから）
           setState('ready')
           // 少し遅延してstartTrialを呼ぶ
-          setTimeout(() => {
+          setTimeout(async () => {
             console.log('Calling startTrial...')
-            startTrial()
+            
+            // startTrial関数の内容を直接実行（循環依存回避）
+            const audioGenerator = audioGeneratorRef.current
+            const controller = staircaseControllerRef.current
+            
+            if (!audioGenerator || !controller) {
+              console.log('Missing dependencies for next trial')
+              return
+            }
+            
+            try {
+              const patternType = audioGenerator.generateRandomPattern()
+              const volumeDifference = controller.getCurrentVolumeDifference()
+              const strongBeatLevel = controller.getStrongBeatLevel()
+              
+              audioGenerator.setPattern(patternType)
+              audioGenerator.setVolumeDifference(volumeDifference)
+              audioGenerator.setStrongBeatLevel(strongBeatLevel)
+
+              setCurrentTrial({
+                patternType,
+                startTime: Date.now(),
+                isPlaying: false
+              })
+
+              updateProgress()
+              console.log('Next trial prepared:', { patternType, volumeDifference })
+              
+            } catch (err) {
+              console.error('Next trial preparation error:', err)
+              handleError(err as Error)
+            }
           }, 100)
         }
       }, 1500)
@@ -357,7 +388,7 @@ export function useBSTTest(config: BSTTestConfig) {
       console.error('submitAnswer error:', err)
       handleError(err as Error)
     }
-  }, [currentTrial, state, handleError, startTrial])
+  }, [currentTrial, state, handleError, updateProgress])
 
   // 結果取得
   const getResult = useCallback((): BSTTestResult | null => {
@@ -421,7 +452,7 @@ export function useBSTTest(config: BSTTestConfig) {
     })
 
     updateProgress()
-  }, [])
+  }, [updateProgress])
 
   // クリーンアップ
   const cleanup = useCallback(() => {
@@ -453,7 +484,7 @@ export function useBSTTest(config: BSTTestConfig) {
     if (state === 'ready' && !currentTrial.patternType) {
       startTrial()
     }
-  }, [state, currentTrial.patternType, startTrial])
+  }, [state, currentTrial.patternType])
 
   // デバッグ情報
   const getDebugInfo = useCallback(() => {

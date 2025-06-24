@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { 
@@ -216,39 +216,56 @@ export default function BSTTestPage() {
     }
   }, [currentSession, router])
 
+  // コールバック関数を安定化
+  const handleTrialComplete = useCallback((trial: BSTTrial) => {
+    // データベースに試行データを保存
+    const trialData: any = {
+      sessionId: currentSession?.sessionId || '',
+      trialIndex: trial.trialIndex,
+      volumeDifference: trial.volumeDifference,
+      patternType: trial.patternType,
+      userAnswer: trial.userAnswer,
+      correct: trial.correct,
+      strongBeatLevel: trial.strongBeatLevel,
+      weakBeatLevel: trial.weakBeatLevel,
+      isReversal: trial.isReversal,
+      timestamp: trial.timestamp
+    }
+    
+    if (trial.reactionTime !== undefined) {
+      trialData.reactionTime = trial.reactionTime
+    }
+    
+    recordBSTTrial(trialData)
+  }, [currentSession?.sessionId, recordBSTTrial])
+
+  const handleProgress = useCallback((progress: any) => {
+    // 開発環境でのみデバッグログ出力
+    if (process.env.NODE_ENV === 'development') {
+      console.log('BST Progress:', progress)
+    }
+  }, [])
+
+  const handleError = useCallback((error: Error) => {
+    console.error('BST Test Error:', error)
+  }, [])
+
   // BST テスト設定
-  const testConfig: BSTTestConfig = {
+  const testConfig: BSTTestConfig = useMemo(() => ({
     sessionId: currentSession?.sessionId || '',
     profileId: currentSession?.profileId || '',
     hearingThreshold: getHearingThresholdAverage(),
-    onTrialComplete: (trial: BSTTrial) => {
-      // データベースに試行データを保存
-      const trialData: any = {
-        sessionId: currentSession?.sessionId || '',
-        trialIndex: trial.trialIndex,
-        volumeDifference: trial.volumeDifference,
-        patternType: trial.patternType,
-        userAnswer: trial.userAnswer,
-        correct: trial.correct,
-        strongBeatLevel: trial.strongBeatLevel,
-        weakBeatLevel: trial.weakBeatLevel,
-        isReversal: trial.isReversal,
-        timestamp: trial.timestamp
-      }
-      
-      if (trial.reactionTime !== undefined) {
-        trialData.reactionTime = trial.reactionTime
-      }
-      
-      recordBSTTrial(trialData)
-    },
-    onProgress: (progress) => {
-      console.warn('BST Progress:', progress)
-    },
-    onError: (error) => {
-      console.error('BST Test Error:', error)
-    }
-  }
+    onTrialComplete: handleTrialComplete,
+    onProgress: handleProgress,
+    onError: handleError
+  }), [
+    currentSession?.sessionId, 
+    currentSession?.profileId, 
+    getHearingThresholdAverage,
+    handleTrialComplete,
+    handleProgress,
+    handleError
+  ])
 
   // BST テストフック
   const {
