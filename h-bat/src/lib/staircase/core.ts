@@ -170,6 +170,20 @@ export class StaircaseController {
     const nextLevel = this.calculateNextLevel(nextDirection, isReversal)
     const nextStepSize = this.getStepSize(this.state.totalReversals)
 
+    // デバッグログ（開発環境のみ）
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Staircase Trial:', {
+        trialIndex: trial.trialIndex,
+        currentLevel: this.state.currentLevel,
+        response,
+        nextDirection,
+        isReversal,
+        nextLevel,
+        stepSize: this.state.currentStepSize,
+        rule: this.config.rule
+      })
+    }
+
     // 状態更新
     this.state.trialHistory.push(trial)
     this.state.currentLevel = nextLevel
@@ -191,11 +205,11 @@ export class StaircaseController {
         return 'up'
       }
       
-      // 連続正答チェック
-      const recentTrials = this.state.trialHistory.slice(-1)
-      const allCorrect = recentTrials.length > 0 && recentTrials.every(t => t.response)
+      // 2連続正答チェック（現在の正答 + 直前の試行も正答）
+      const lastTrial = this.state.trialHistory[this.state.trialHistory.length - 1]
+      const hasConsecutiveCorrect = lastTrial && lastTrial.response && response
       
-      return allCorrect ? 'down' : this.state.currentDirection
+      return hasConsecutiveCorrect ? 'down' : this.state.currentDirection
     }
   }
 
@@ -207,9 +221,8 @@ export class StaircaseController {
   private calculateNextLevel(direction: 'up' | 'down', _isReversal: boolean): number {
     let nextLevel = this.state.currentLevel
 
-    // BST/BIT/BFITの場合は乗算、聴力測定の場合は加算
-    if (this.config === BST_STAIRCASE_CONFIG || 
-        this.config === BIT_STAIRCASE_CONFIG) {
+    // ステップサイズが1未満の場合は乗算方式（BST/BIT/BFIT）、それ以外は加算方式（聴力測定）
+    if (this.state.currentStepSize < 1) {
       // 乗算方式
       const multiplier = direction === 'down' ? this.state.currentStepSize : (1 / this.state.currentStepSize)
       nextLevel = this.state.currentLevel * multiplier
