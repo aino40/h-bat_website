@@ -24,11 +24,13 @@ export default function HearingTestPage() {
   // セッション初期化
   useEffect(() => {
     if (!currentSession) {
-      // セッションがない場合は前のページに戻る
-      router.push('/test')
+      // セッションがない場合はユーザー情報入力画面に戻る
+      console.warn('No current session found, redirecting to user-info')
+      router.push('/user-info')
       return
     }
 
+    console.log('Current session found:', currentSession)
     setSessionId(currentSession.sessionId)
     setProfileId(currentSession.profileId || '')
     setIsReady(true)
@@ -114,9 +116,15 @@ export default function HearingTestPage() {
               <Headphones className="w-12 h-12 text-blue-600" />
             </motion.div>
             <h2 className="text-xl font-semibold mb-2">聴力測定を準備中...</h2>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-4">
               音響システムを初期化しています。しばらくお待ちください。
             </p>
+            {/* デバッグ情報 */}
+            <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
+              <div>Session Ready: {isReady ? '✓' : '✗'}</div>
+              <div>Test Ready: {isTestReady ? '✓' : '✗'}</div>
+              <div>Session ID: {sessionId || 'None'}</div>
+            </div>
           </div>
         </Card>
       </div>

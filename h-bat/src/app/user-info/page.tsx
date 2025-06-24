@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { useStaircaseStore } from '@/stores/staircaseStore'
 
 // バリデーションスキーマ
 const userInfoSchema = z.object({
@@ -43,6 +44,7 @@ type UserInfoForm = z.infer<typeof userInfoSchema>
 export default function UserInfoPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { startSession } = useStaircaseStore()
   
   const {
     register,
@@ -61,17 +63,24 @@ export default function UserInfoPage() {
     
     try {
       // ユーザー情報をローカルストレージに保存
-      localStorage.setItem('h-bat-user-info', JSON.stringify({
+      const userInfo = {
         ...data,
         timestamp: new Date().toISOString()
-      }))
+      }
+      localStorage.setItem('h-bat-user-info', JSON.stringify(userInfo))
+      
+      // セッションを開始（プロフィールIDとしてタイムスタンプを使用）
+      const profileId = `profile_${Date.now()}`
+      const sessionId = startSession(profileId)
+      
+      console.log('Session created:', { sessionId, profileId, userInfo })
       
       // 聴力閾値測定画面に遷移
       setTimeout(() => {
         router.push('/test/hearing')
       }, 1000)
     } catch (error) {
-      console.error('Error saving user info:', error)
+      console.error('Error saving user info or starting session:', error)
       setIsLoading(false)
     }
   }
