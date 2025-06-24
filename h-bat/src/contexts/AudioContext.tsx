@@ -169,6 +169,8 @@ export function AudioProvider({ children, autoInitialize = true }: AudioProvider
       }, 1000)
       return () => clearInterval(interval)
     }
+    // production環境では何もしない（undefinedを返す）
+    return undefined
   }, []) // 空の依存配列でループを防止
 
   // コンテキスト値
