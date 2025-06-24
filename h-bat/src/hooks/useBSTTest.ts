@@ -184,22 +184,35 @@ export function useBSTTest(config: BSTTestConfig) {
     const audioGenerator = audioGeneratorRef.current
     const staircaseController = staircaseControllerRef.current
 
+    console.log('startTrial called:', { 
+      state, 
+      hasAudioGenerator: !!audioGenerator, 
+      hasController: !!staircaseController 
+    })
+
     if (!audioGenerator || !staircaseController) {
+      console.log('startTrial early return: missing dependencies')
       return
     }
 
     // 状態が初期化中やエラー状態の場合は実行しない
     if (state === 'initializing' || state === 'error' || state === 'completed') {
+      console.log('startTrial early return: invalid state:', state)
       return
     }
 
     try {
+      console.log('Starting new trial...')
+      
       // ランダムパターン生成
       const patternType = audioGenerator.generateRandomPattern()
+      console.log('Generated pattern:', patternType)
       
       // 音響設定更新
       const volumeDifference = staircaseController.getCurrentVolumeDifference()
       const strongBeatLevel = staircaseController.getStrongBeatLevel()
+      
+      console.log('Audio settings:', { volumeDifference, strongBeatLevel })
       
       audioGenerator.setPattern(patternType)
       audioGenerator.setVolumeDifference(volumeDifference)
@@ -214,8 +227,11 @@ export function useBSTTest(config: BSTTestConfig) {
 
       setState('ready')
       updateProgress()
+      
+      console.log('Trial started successfully:', { patternType, volumeDifference })
 
     } catch (err) {
+      console.error('startTrial error:', err)
       handleError(err as Error)
     }
   }, [state, handleError])
@@ -268,12 +284,20 @@ export function useBSTTest(config: BSTTestConfig) {
   const submitAnswer = useCallback(async (userAnswer: '2beat' | '3beat') => {
     const staircaseController = staircaseControllerRef.current
     
+    console.log('submitAnswer called:', { userAnswer, state, currentTrial })
+    
     if (!staircaseController || !currentTrial.patternType || state !== 'waiting-response') {
+      console.log('submitAnswer early return:', { 
+        hasController: !!staircaseController, 
+        hasPattern: !!currentTrial.patternType, 
+        state 
+      })
       return
     }
 
     try {
       setState('processing')
+      console.log('Processing answer...')
 
       // 反応時間計算
       const reactionTime = currentTrial.startTime 
@@ -287,6 +311,8 @@ export function useBSTTest(config: BSTTestConfig) {
         reactionTime
       )
 
+      console.log('Trial recorded:', trial)
+
       // 試行完了コールバック
       configRef.current.onTrialComplete?.(trial)
 
@@ -298,27 +324,37 @@ export function useBSTTest(config: BSTTestConfig) {
         message: isCorrect ? '正解！' : 'もう一度'
       })
 
+      console.log('Feedback set:', { isCorrect })
+
       // 進捗更新
       updateProgress()
 
       // フィードバック表示時間
       feedbackTimerRef.current = setTimeout(() => {
+        console.log('Feedback timeout triggered')
         setFeedback({ show: false, isCorrect: null, message: '' })
         
         // 収束判定
-        if (staircaseController.isConverged()) {
+        const isConverged = staircaseController.isConverged()
+        console.log('Convergence check:', { isConverged })
+        
+        if (isConverged) {
+          console.log('Test completed - converged')
           setState('completed')
         } else {
+          console.log('Starting next trial...')
           // 次の試行開始（状態をreadyに戻してから）
           setState('ready')
           // 少し遅延してstartTrialを呼ぶ
           setTimeout(() => {
+            console.log('Calling startTrial...')
             startTrial()
           }, 100)
         }
       }, 1500)
 
     } catch (err) {
+      console.error('submitAnswer error:', err)
       handleError(err as Error)
     }
   }, [currentTrial, state, handleError, startTrial])

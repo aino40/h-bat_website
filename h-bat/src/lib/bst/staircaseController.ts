@@ -175,6 +175,18 @@ export class BSTStaircaseController {
       this.startTime, 
       state.currentLevel
     )
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('BST Convergence check:', {
+        totalTrials: state.totalTrials,
+        totalReversals: state.totalReversals,
+        targetReversals: this.config.targetReversals,
+        isConverged: convergence.isConverged,
+        confidence: convergence.confidence,
+        reversalPoints: state.reversalPoints
+      })
+    }
+    
     return convergence.isConverged
   }
 
