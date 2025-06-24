@@ -22,7 +22,7 @@ export default function RootLayout({
     <html lang="ja">
       <body className="antialiased">
         <AuthProvider>
-          <AudioProvider autoInitialize={true}>
+          <AudioProvider autoInitialize={false}>
             {children}
           </AudioProvider>
         </AuthProvider>

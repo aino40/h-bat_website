@@ -61,12 +61,12 @@ export function AudioProvider({ children, autoInitialize = true }: AudioProvider
   })
   const [isLoading, setIsLoading] = useState(false)
 
-  // 状態の更新
+  // 状態の更新（依存関係を最小化）
   const updateState = useCallback(() => {
     if (typeof window !== 'undefined') {
       setState(getAudioEngineState())
     }
-  }, [])
+  }, []) // 空の依存配列で安定化
 
   // 音響エンジンの初期化
   const initialize = useCallback(async (): Promise<boolean> => {
@@ -151,18 +151,25 @@ export function AudioProvider({ children, autoInitialize = true }: AudioProvider
     }
   }, [state.isInitialized, initialize, start])
 
-  // 自動初期化
+  // 自動初期化（依存配列から initialize を除去）
   useEffect(() => {
     if (typeof window !== 'undefined' && autoInitialize && !state.isInitialized && !isLoading) {
       initialize()
     }
-  }, [autoInitialize, state.isInitialized, isLoading, initialize])
+  }, [autoInitialize, state.isInitialized, isLoading]) // initialize を除去
 
-  // 状態の定期更新（デバッグ用）
+  // 状態の定期更新（デバッグ用）- 本番では無効化
   useEffect(() => {
-    const interval = setInterval(updateState, 1000)
-    return () => clearInterval(interval)
-  }, [updateState])
+    // 本番環境では定期更新を無効化してパフォーマンス向上
+    if (process.env.NODE_ENV !== 'production') {
+      const interval = setInterval(() => {
+        if (typeof window !== 'undefined') {
+          setState(getAudioEngineState())
+        }
+      }, 1000)
+      return () => clearInterval(interval)
+    }
+  }, []) // 空の依存配列でループを防止
 
   // コンテキスト値
   const contextValue: AudioContextType = {
