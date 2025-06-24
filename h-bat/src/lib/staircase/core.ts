@@ -202,14 +202,21 @@ export class StaircaseController {
       return response ? 'down' : 'up'
     } else { // '2down1up'
       if (!response) {
+        // 誤答時は必ず易しくする（'up'方向）
         return 'up'
       }
       
-      // 2連続正答チェック（現在の正答 + 直前の試行も正答）
+      // 正答時：2連続正答チェック（現在の正答 + 直前の試行も正答）
       const lastTrial = this.state.trialHistory[this.state.trialHistory.length - 1]
       const hasConsecutiveCorrect = lastTrial && lastTrial.response && response
       
-      return hasConsecutiveCorrect ? 'down' : this.state.currentDirection
+      if (hasConsecutiveCorrect) {
+        // 2連続正答の場合は難しくする（'down'方向）
+        return 'down'
+      } else {
+        // 1回だけの正答の場合は現在の方向を維持
+        return this.state.currentDirection
+      }
     }
   }
 
