@@ -109,14 +109,16 @@ export function useBSTTest(config: BSTTestConfig) {
   const staircaseControllerRef = useRef<BSTStaircaseController | null>(null)
   const playbackTimerRef = useRef<NodeJS.Timeout | null>(null)
   const feedbackTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const configRef = useRef(config)
+  configRef.current = config
 
   // エラーハンドリング
   const handleError = useCallback((err: Error) => {
     console.error('BST test error:', err)
     setError(err)
     setState('error')
-    config.onError?.(err)
-  }, [config])
+    configRef.current.onError?.(err)
+  }, [])
 
   // 進捗更新
   const updateProgress = useCallback(() => {
@@ -143,8 +145,8 @@ export function useBSTTest(config: BSTTestConfig) {
     }
 
     setProgress(newProgress)
-    config.onProgress?.(newProgress)
-  }, [config])
+    configRef.current.onProgress?.(newProgress)
+  }, [])
 
   // 初期化
   const initialize = useCallback(async () => {
@@ -154,17 +156,17 @@ export function useBSTTest(config: BSTTestConfig) {
 
       // オーディオジェネレーター初期化
       const audioGenerator = new BSTAudioGenerator({
-        strongBeatLevel: config.hearingThreshold + 30,
-        ...config.audioConfig
+        strongBeatLevel: configRef.current.hearingThreshold + 30,
+        ...configRef.current.audioConfig
       })
       await audioGenerator.initialize()
       audioGeneratorRef.current = audioGenerator
 
       // ステアケースコントローラー初期化
       const staircaseController = new BSTStaircaseController(
-        config.sessionId,
-        config.profileId,
-        config.hearingThreshold
+        configRef.current.sessionId,
+        configRef.current.profileId,
+        configRef.current.hearingThreshold
       )
       staircaseControllerRef.current = staircaseController
 
@@ -175,7 +177,7 @@ export function useBSTTest(config: BSTTestConfig) {
     } catch (err) {
       handleError(err as Error)
     }
-  }, [config, handleError, updateProgress])
+  }, [handleError])
 
   // 新しい試行開始
   const startTrial = useCallback(async () => {
@@ -211,7 +213,7 @@ export function useBSTTest(config: BSTTestConfig) {
     } catch (err) {
       handleError(err as Error)
     }
-  }, [state, handleError, updateProgress])
+  }, [state, handleError])
 
   // 音響再生
   const playAudio = useCallback(async () => {
@@ -281,7 +283,7 @@ export function useBSTTest(config: BSTTestConfig) {
       )
 
       // 試行完了コールバック
-      config.onTrialComplete?.(trial)
+      configRef.current.onTrialComplete?.(trial)
 
       // フィードバック表示
       const isCorrect = trial.correct
@@ -310,7 +312,7 @@ export function useBSTTest(config: BSTTestConfig) {
     } catch (err) {
       handleError(err as Error)
     }
-  }, [currentTrial, state, config, updateProgress, startTrial, handleError])
+  }, [currentTrial, state, handleError, startTrial])
 
   // 結果取得
   const getResult = useCallback((): BSTTestResult | null => {
@@ -374,7 +376,7 @@ export function useBSTTest(config: BSTTestConfig) {
     })
 
     updateProgress()
-  }, [updateProgress])
+  }, [])
 
   // クリーンアップ
   const cleanup = useCallback(() => {
