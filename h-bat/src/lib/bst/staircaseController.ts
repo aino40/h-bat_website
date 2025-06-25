@@ -6,11 +6,7 @@ import {
   StaircaseTrial, 
   StaircaseResult 
 } from '@/lib/staircase/core'
-import { 
-  ConvergenceDetector,
-  ConvergenceConfig, 
-  DEFAULT_CONVERGENCE_CONFIG 
-} from '@/lib/staircase/convergence'
+// Note: ConvergenceDetector removed to simplify BST convergence logic
 // Note: BSTConfig and DEFAULT_BST_CONFIG imported but not used in this version
 
 // BST専用のステアケース設定
@@ -19,7 +15,6 @@ export interface BSTStaircaseConfig extends StaircaseConfig {
   minVolumeDifference: number // 最小音量差（dB）
   maxVolumeDifference: number // 最大音量差（dB）
   volumeStepSizes: number[] // 音量差ステップサイズ（dB）
-  convergenceConfig: ConvergenceConfig
 }
 
 // BST試行データ
@@ -65,18 +60,12 @@ export const DEFAULT_BST_STAIRCASE_CONFIG: BSTStaircaseConfig = {
   initialVolumeDifference: 20,
   minVolumeDifference: 0.5,
   maxVolumeDifference: 40,
-  volumeStepSizes: [8, 4, 2],
-  convergenceConfig: {
-    ...DEFAULT_CONVERGENCE_CONFIG,
-    targetReversals: 6,
-    minReversals: 6
-  }
+  volumeStepSizes: [8, 4, 2]
 }
 
 // BST専用ステアケースコントローラー
 export class BSTStaircaseController {
   private controller: StaircaseController
-  private convergenceDetector: ConvergenceDetector
   private config: BSTStaircaseConfig
   private sessionId: string
   private profileId: string
@@ -97,7 +86,6 @@ export class BSTStaircaseController {
     
     // ステアケースコントローラー初期化
     this.controller = new StaircaseController(this.config)
-    this.convergenceDetector = new ConvergenceDetector(this.config.convergenceConfig)
   }
 
   // 現在の音量差取得
@@ -152,52 +140,53 @@ export class BSTStaircaseController {
     estimatedRemainingTrials: number
   } {
     const state = this.controller.getState()
-    const convergence = this.convergenceDetector.checkConvergence(
-      state.trialHistory, 
-      this.startTime, 
-      state.currentLevel
-    )
+    const isConverged = this.isConverged() // 自身の収束判定を使用
 
     return {
       trialsCompleted: state.totalTrials,
       reversalsCount: state.totalReversals,
-      isConverged: convergence.isConverged,
+      isConverged,
       currentVolumeDifference: state.currentLevel,
       estimatedRemainingTrials: Math.max(0, this.config.targetReversals - state.totalReversals) * 2
     }
   }
 
-  // 収束判定
+  // 収束判定（シンプルな実装）
   isConverged(): boolean {
     const state = this.controller.getState()
-    const convergence = this.convergenceDetector.checkConvergence(
-      state.trialHistory, 
-      this.startTime, 
-      state.currentLevel
-    )
+    
+    // 基本的な収束判定：目標反転数に達した、または最大試行数に達した
+    const hasEnoughReversals = state.totalReversals >= this.config.targetReversals
+    const hasMaxTrials = state.totalTrials >= this.config.maxTrials
+    const hasMinTrials = state.totalTrials >= this.config.minTrials
+    
+    // ステアケース制御器自体の収束判定も確認
+    const staircaseConverged = this.controller.isConverged()
+    
+    const isConverged = (hasEnoughReversals && hasMinTrials) || hasMaxTrials || staircaseConverged
     
     if (process.env.NODE_ENV === 'development') {
       console.log('BST Convergence check:', {
         totalTrials: state.totalTrials,
         totalReversals: state.totalReversals,
         targetReversals: this.config.targetReversals,
-        isConverged: convergence.isConverged,
-        confidence: convergence.confidence,
+        minTrials: this.config.minTrials,
+        maxTrials: this.config.maxTrials,
+        hasEnoughReversals,
+        hasMinTrials,
+        hasMaxTrials,
+        staircaseConverged,
+        isConverged,
         reversalPoints: state.reversalPoints
       })
     }
     
-    return convergence.isConverged
+    return isConverged
   }
 
   // 結果取得
   getResult(): BSTResult | null {
     const state = this.controller.getState()
-    const convergence = this.convergenceDetector.checkConvergence(
-      state.trialHistory, 
-      this.startTime, 
-      state.currentLevel
-    )
     const result = this.controller.getResult()
     
     if (!result || state.totalTrials === 0) return null
@@ -217,16 +206,19 @@ export class BSTStaircaseController {
     // パターン別精度計算
     const patternAccuracy = this.calculatePatternAccuracy(bstTrials)
 
+    // シンプルな信頼度計算
+    const confidence = result.confidence || 0.8
+
     return {
       ...result,
       volumeDifferenceThreshold: result.threshold,
       trials: bstTrials,
       patternAccuracy,
       convergenceAnalysis: {
-        isConverged: convergence.isConverged,
+        isConverged: this.isConverged(),
         reversalCount: state.totalReversals,
         finalReversals: state.reversalPoints.slice(-6),
-        confidence: convergence.confidence
+        confidence
       }
     }
   }

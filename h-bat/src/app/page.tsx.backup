@@ -1,0 +1,248 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
+import { 
+  Play, 
+  Headphones, 
+  BarChart3, 
+  Settings, 
+  CheckCircle, 
+  AlertCircle,
+  Clock,
+  Shield,
+  FileText,
+  ArrowRight
+} from 'lucide-react'
+import { Button, Card, CardContent, CardHeader, CardTitle, Checkbox } from '@/components/ui'
+
+export default function Home() {
+  const router = useRouter()
+  const [hasConsented, setHasConsented] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleStartTest = async () => {
+    if (!hasConsented) {
+      alert('研究参加への同意が必要です。')
+      return
+    }
+
+    setIsLoading(true)
+    
+    try {
+      // 同意情報をローカルストレージに保存
+      localStorage.setItem('h-bat-consent', JSON.stringify({
+        consented: true,
+        timestamp: new Date().toISOString()
+      }))
+      
+      // ユーザー情報入力画面に遷移
+      setTimeout(() => {
+        router.push('/user-info')
+      }, 500)
+    } catch (error) {
+      console.error('Error saving consent:', error)
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+      {/* ヘッダー */}
+      <header className="bg-white/90 backdrop-blur-sm shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-4">
+            <div className="flex items-center space-x-3">
+              <div className="bg-blue-600 rounded-lg p-2">
+                <Headphones className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">H-BAT</h1>
+                <p className="text-sm text-gray-600">Rhythm Perception Test</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Settings className="h-4 w-4" />
+              <span>研究用システム</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* メインコンテンツ */}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center mb-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              H-BAT
+            </h1>
+            <p className="text-xl text-gray-600 mb-2">
+              リズム知覚テスト
+            </p>
+            <p className="text-lg text-gray-500">
+              あなたのリズム感を科学的に測定します
+            </p>
+          </motion.div>
+        </div>
+
+        {/* テスト内容 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="grid md:grid-cols-2 gap-6 mb-8"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-blue-600" />
+                テスト内容
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                  <span className="text-sm">🎧 聴力チェック (3分)</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full" />
+                  <span className="text-sm">🥁 拍子判定テスト (5分)</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                  <span className="text-sm">⏱️ テンポ変化テスト (5分)</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                  <span className="text-sm">🎼 複雑リズムテスト (7分)</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                注意事項
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Headphones className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm">ヘッドフォン必須</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Shield className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm">静かな環境で実施</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Clock className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm">約20分の所要時間</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <FileText className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm">データは研究目的で使用</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* 同意フォーム */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="bg-white rounded-lg shadow-lg p-6 mb-8"
+        >
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            研究参加への同意
+          </h3>
+          <div className="bg-gray-50 rounded-lg p-4 mb-4 text-sm text-gray-700">
+            <p className="mb-3">
+              このテストは音楽認知に関する研究の一環として実施されます。
+              収集されたデータは研究目的でのみ使用され、個人情報は適切に保護されます。
+            </p>
+            <ul className="space-y-1 text-xs">
+              <li>• テストの参加は任意であり、いつでも中断できます</li>
+              <li>• 収集されるデータ: 年齢、性別、音楽経験、テスト結果</li>
+              <li>• データは匿名化され、研究発表にのみ使用されます</li>
+              <li>• 個人を特定する情報は一切公開されません</li>
+            </ul>
+          </div>
+          
+          <label className="flex items-start space-x-3 cursor-pointer">
+            <Checkbox
+              checked={hasConsented}
+              onCheckedChange={(checked) => setHasConsented(checked === true)}
+              className="mt-1"
+            />
+            <span className="text-sm text-gray-700">
+              上記の内容を理解し、研究参加に同意します。
+              <br />
+              <span className="text-xs text-gray-500">
+                ※同意いただけない場合、テストを実施できません
+              </span>
+            </span>
+          </label>
+        </motion.div>
+
+        {/* 開始ボタン */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="text-center"
+        >
+          <Button
+            onClick={handleStartTest}
+            disabled={!hasConsented || isLoading}
+            size="lg"
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 px-8 py-4 text-lg"
+          >
+            {isLoading ? (
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>準備中...</span>
+              </div>
+            ) : (
+              <>
+                <Play className="w-5 h-5 mr-2" />
+                テストを開始する
+              </>
+            )}
+          </Button>
+          
+          {!hasConsented && (
+            <p className="text-sm text-gray-500 mt-3">
+              研究参加への同意が必要です
+            </p>
+          )}
+        </motion.div>
+      </main>
+
+      {/* フッター */}
+      <footer className="bg-white border-t border-gray-200 mt-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center text-sm text-gray-600">
+            <p>H-BAT (Rhythm Perception Test) - 音楽認知研究プロジェクト</p>
+            <p className="mt-1">
+              問い合わせ: 
+              <a href="mailto:research@example.com" className="text-blue-600 hover:underline ml-1">
+                research@example.com
+              </a>
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}

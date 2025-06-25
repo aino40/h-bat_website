@@ -311,7 +311,10 @@ export function useBSTTest(config: BSTTestConfig) {
         reactionTime
       )
 
-      console.log('Trial recorded:', trial)
+      console.log('Recording BST trial:', {
+        trial,
+        currentState: staircaseController.getDebugInfo?.()
+      })
 
       // 試行完了コールバック
       configRef.current.onTrialComplete?.(trial)
@@ -336,7 +339,10 @@ export function useBSTTest(config: BSTTestConfig) {
         
         // 収束判定
         const isConverged = staircaseController.isConverged()
-        console.log('Convergence check:', { isConverged })
+        console.log('Convergence check:', { 
+          isConverged, 
+          debugInfo: staircaseController.getDebugInfo?.() 
+        })
         
         if (isConverged) {
           console.log('Test completed - converged')
