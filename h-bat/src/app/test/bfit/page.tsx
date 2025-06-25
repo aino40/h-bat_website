@@ -1,6 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { 

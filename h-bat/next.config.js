@@ -12,6 +12,8 @@ const nextConfig = {
     // 実験的機能の設定
     optimizePackageImports: ['lucide-react'],
   },
+  // 静的生成を無効化してSSRエラーを回避
+  output: 'standalone',
 }
 
 module.exports = nextConfig

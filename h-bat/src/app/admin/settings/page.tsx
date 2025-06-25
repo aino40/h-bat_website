@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Settings, Save, AlertCircle } from 'lucide-react'

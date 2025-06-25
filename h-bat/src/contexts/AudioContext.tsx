@@ -45,28 +45,32 @@ interface AudioProviderProps {
 
 // 音響プロバイダーコンポーネント
 export function AudioProvider({ children, autoInitialize = true }: AudioProviderProps) {
-  const [state, setState] = useState<AudioEngineState>(() => {
-    // Server-side safe initialization
-    if (typeof window === 'undefined') {
-      return {
-        isInitialized: false,
-        isStarted: false,
-        hasUserPermission: false,
-        context: null,
-        masterVolume: null,
-        error: null
-      }
-    }
-    return getAudioEngineState()
+  // SSR-safe state initialization
+  const [state, setState] = useState<AudioEngineState>({
+    isInitialized: false,
+    isStarted: false,
+    hasUserPermission: false,
+    context: null,
+    masterVolume: null,
+    error: null
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [isClient, setIsClient] = useState(false)
 
-  // 状態の更新（依存関係を最小化）
-  const updateState = useCallback(() => {
+  // Client-side hydration effect
+  useEffect(() => {
+    setIsClient(true)
     if (typeof window !== 'undefined') {
       setState(getAudioEngineState())
     }
-  }, []) // 空の依存配列で安定化
+  }, [])
+
+  // 状態の更新（依存関係を最小化）
+  const updateState = useCallback(() => {
+    if (isClient && typeof window !== 'undefined') {
+      setState(getAudioEngineState())
+    }
+  }, [isClient]) // isClient dependency for safety
 
   // 音響エンジンの初期化
   const initialize = useCallback(async (): Promise<boolean> => {
@@ -153,15 +157,15 @@ export function AudioProvider({ children, autoInitialize = true }: AudioProvider
 
   // 自動初期化（依存配列から initialize を除去）
   useEffect(() => {
-    if (typeof window !== 'undefined' && autoInitialize && !state.isInitialized && !isLoading) {
+    if (isClient && autoInitialize && !state.isInitialized && !isLoading) {
       initialize()
     }
-  }, [autoInitialize, state.isInitialized, isLoading]) // initialize を除去
+  }, [isClient, autoInitialize, state.isInitialized, isLoading]) // initialize を除去
 
   // 状態の定期更新（デバッグ用）- 本番では無効化
   useEffect(() => {
     // 本番環境では定期更新を無効化してパフォーマンス向上
-    if (process.env.NODE_ENV !== 'production') {
+    if (isClient && process.env.NODE_ENV !== 'production') {
       const interval = setInterval(() => {
         if (typeof window !== 'undefined') {
           setState(getAudioEngineState())
@@ -171,7 +175,7 @@ export function AudioProvider({ children, autoInitialize = true }: AudioProvider
     }
     // production環境では何もしない（undefinedを返す）
     return undefined
-  }, []) // 空の依存配列でループを防止
+  }, [isClient]) // isClient dependency for safety
 
   // コンテキスト値
   const contextValue: AudioContextType = {
