@@ -247,12 +247,21 @@ export default function BITTestScreen({
 
     // 試行記録
     try {
+      console.log('BIT: Recording response:', {
+        direction: currentDirection,
+        userAnswer,
+        correct,
+        reactionTime
+      })
+      
       const trial = staircaseController.recordResponse(
         currentDirection,
         userAnswer,
         ioiSequence,
         reactionTime
       )
+
+      console.log('BIT: Trial recorded:', trial)
 
       setLastAnswer(userAnswer)
       setIsCorrect(correct)
@@ -262,16 +271,23 @@ export default function BITTestScreen({
       // 試行完了コールバック
       config.onTrialComplete(trial)
 
+      // 進捗状況を確認
+      const progress = staircaseController.getProgress()
+      console.log('BIT: Progress after trial:', progress)
+
       // フィードバック表示後、次の試行へ
       setTimeout(() => {
+        console.log('BIT: Checking convergence after feedback...')
         if (staircaseController.isConverged()) {
+          console.log('BIT: Test converged, completing...')
           completeTest()
         } else {
+          console.log('BIT: Continuing to next trial...')
           setTestState('ready')
         }
       }, 1500)
     } catch (err) {
-      console.error('Trial recording failed:', err)
+      console.error('BIT: Trial recording failed:', err)
       setError('試行の記録に失敗しました')
       setTestState('error')
     }

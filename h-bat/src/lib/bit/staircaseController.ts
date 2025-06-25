@@ -79,7 +79,6 @@ export const DEFAULT_BIT_STAIRCASE_CONFIG: BITStaircaseConfig = {
 // BIT専用ステアケースコントローラー
 export class BITStaircaseController {
   private controller: StaircaseController
-  private convergenceDetector: ConvergenceDetector
   private config: BITStaircaseConfig
   private sessionId: string
   private profileId: string
@@ -100,7 +99,6 @@ export class BITStaircaseController {
     
     // ステアケースコントローラー初期化
     this.controller = new StaircaseController(this.config)
-    this.convergenceDetector = new ConvergenceDetector(this.config.convergenceConfig)
   }
 
   // 現在のIOI変化率取得
@@ -123,8 +121,18 @@ export class BITStaircaseController {
     const correct = direction === userAnswer
     const slopeK = this.getCurrentSlopeK()
     
+    console.log('BIT: Recording response in staircase controller:', {
+      direction,
+      userAnswer,
+      correct,
+      slopeK,
+      currentState: this.controller.getState()
+    })
+    
     // ステアケース内部での試行記録
     const trial = this.controller.recordTrial(correct)
+    
+    console.log('BIT: Staircase trial recorded:', trial)
     
     // BIT専用の試行データを作成
     const bitTrial: BITTrial = {
@@ -142,6 +150,7 @@ export class BITStaircaseController {
       timestamp: trial.timestamp
     }
 
+    console.log('BIT: Final trial data:', bitTrial)
     return bitTrial
   }
 
@@ -154,16 +163,12 @@ export class BITStaircaseController {
     estimatedRemainingTrials: number
   } {
     const state = this.controller.getState()
-    const convergence = this.convergenceDetector.checkConvergence(
-      state.trialHistory, 
-      this.startTime, 
-      state.currentLevel
-    )
+    const isConverged = this.isConverged()
 
     return {
       trialsCompleted: state.totalTrials,
       reversalsCount: state.totalReversals,
-      isConverged: convergence.isConverged,
+      isConverged,
       currentSlopeK: state.currentLevel,
       estimatedRemainingTrials: Math.max(0, this.config.targetReversals - state.totalReversals) * 2
     }
@@ -172,22 +177,29 @@ export class BITStaircaseController {
   // 収束判定
   isConverged(): boolean {
     const state = this.controller.getState()
-    const convergence = this.convergenceDetector.checkConvergence(
-      state.trialHistory, 
-      this.startTime, 
-      state.currentLevel
-    )
-    return convergence.isConverged
+    const hasEnoughReversals = state.totalReversals >= this.config.targetReversals
+    const hasMinTrials = state.totalTrials >= this.config.minTrials
+    const hasMaxTrials = state.totalTrials >= this.config.maxTrials
+    const staircaseConverged = this.controller.isConverged()
+    
+    console.log('BIT: Convergence check:', {
+      totalReversals: state.totalReversals,
+      targetReversals: this.config.targetReversals,
+      totalTrials: state.totalTrials,
+      minTrials: this.config.minTrials,
+      maxTrials: this.config.maxTrials,
+      hasEnoughReversals,
+      hasMinTrials,
+      hasMaxTrials,
+      staircaseConverged
+    })
+    
+    return (hasEnoughReversals && hasMinTrials) || hasMaxTrials || staircaseConverged
   }
 
   // 結果取得
   getResult(): BITResult | null {
     const state = this.controller.getState()
-    const convergence = this.convergenceDetector.checkConvergence(
-      state.trialHistory, 
-      this.startTime, 
-      state.currentLevel
-    )
     const result = this.controller.getResult()
     
     if (!result || state.totalTrials === 0) return null
@@ -217,10 +229,10 @@ export class BITStaircaseController {
       trials: bitTrials,
       directionAccuracy,
       convergenceAnalysis: {
-        isConverged: convergence.isConverged,
+        isConverged: this.isConverged(),
         reversalCount: state.totalReversals,
         finalReversals: state.reversalPoints.slice(-6),
-        confidence: convergence.confidence
+        confidence: result.confidence
       }
     }
   }
