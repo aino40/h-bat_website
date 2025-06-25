@@ -82,17 +82,35 @@ export default function BITTestScreen({
 
   // 初期化
   useEffect(() => {
+    let isMounted = true
+    let timeoutId: NodeJS.Timeout
+    
     const initialize = async () => {
       try {
         console.log('BITTestScreen: Starting initialization...')
         setTestState('initializing')
         setError(null)
         
+        // タイムアウト設定（10秒）
+        timeoutId = setTimeout(() => {
+          if (isMounted) {
+            console.error('BITTestScreen: Initialization timeout')
+            setError('初期化がタイムアウトしました。ページをリロードしてください。')
+            setTestState('error')
+          }
+        }, 10000)
+        
         // 既存のリソースをクリーンアップ
         if (audioGenerator) {
+          console.log('BITTestScreen: Disposing existing audio generator')
           audioGenerator.dispose()
           setAudioGenerator(null)
         }
+        
+        // 少し待機してからリソース作成
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        if (!isMounted) return
         
         // オーディオジェネレータ初期化
         console.log('BITTestScreen: Creating audio generator with hearing threshold:', config.hearingThreshold)
@@ -102,6 +120,12 @@ export default function BITTestScreen({
         
         console.log('BITTestScreen: Initializing audio generator...')
         await generator.initialize()
+        
+        if (!isMounted) {
+          generator.dispose()
+          return
+        }
+        
         setAudioGenerator(generator)
         console.log('BITTestScreen: Audio generator initialized successfully')
 
@@ -112,16 +136,25 @@ export default function BITTestScreen({
           config.profileId,
           config.hearingThreshold
         )
+        
+        if (!isMounted) return
+        
         setStaircaseController(controller)
         console.log('BITTestScreen: Staircase controller created successfully')
 
+        // タイムアウトをクリア
+        clearTimeout(timeoutId)
+        
         setTestState('ready')
         console.log('BITTestScreen: Initialization completed successfully')
       } catch (err) {
         console.error('BITTestScreen: Initialization failed:', err)
-        setError(`テストの初期化に失敗しました: ${err}`)
-        setTestState('error')
-        config.onError(err as Error)
+        clearTimeout(timeoutId)
+        if (isMounted) {
+          setError(`初期化エラー: ${err instanceof Error ? err.message : String(err)}`)
+          setTestState('error')
+          config.onError(err as Error)
+        }
       }
     }
 
@@ -129,12 +162,14 @@ export default function BITTestScreen({
 
     // クリーンアップ
     return () => {
+      isMounted = false
+      clearTimeout(timeoutId)
       if (audioGenerator) {
         console.log('BITTestScreen: Cleaning up audio generator')
         audioGenerator.dispose()
       }
     }
-  }, [config, audioGenerator])
+  }, [config.sessionId, config.profileId, config.hearingThreshold])
 
   // テスト完了
   const completeTest = useCallback(() => {
@@ -427,6 +462,19 @@ export default function BITTestScreen({
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">初期化中...</h3>
                       <p className="text-gray-600">音響システムを準備しています</p>
+                      <p className="text-xs text-gray-500 mt-2">
+                        しばらく待ってもこの画面が続く場合は、ページをリロードしてください
+                      </p>
+                    </div>
+                    <div className="mt-4">
+                      <Button 
+                        onClick={resetTest}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        リトライ
+                      </Button>
                     </div>
                   </div>
                 )}

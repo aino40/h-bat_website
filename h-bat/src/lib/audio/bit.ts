@@ -96,23 +96,38 @@ export class BITAudioGenerator {
 
   // 初期化
   async initialize(): Promise<void> {
-    if (this.isInitialized) return
+    if (this.isInitialized) {
+      console.log('BIT: Already initialized, skipping')
+      return
+    }
 
     try {
+      console.log('BIT: Starting audio initialization...')
+      
       // Tone.js開始
       if (Tone.context.state !== 'running') {
+        console.log('BIT: Starting Tone.js context...')
         await Tone.start()
+        console.log('BIT: Tone.js context started')
       }
 
       // 既存の音源を破棄
       if (this.kickSynth) {
+        console.log('BIT: Disposing existing kick synth')
         this.kickSynth.dispose()
+        this.kickSynth = null
       }
       if (this.snareSynth) {
+        console.log('BIT: Disposing existing snare synth')
         this.snareSynth.dispose()
+        this.snareSynth = null
       }
 
+      // 少し待機
+      await new Promise(resolve => setTimeout(resolve, 50))
+
       // 合成音源初期化
+      console.log('BIT: Creating kick synth...')
       this.kickSynth = new Tone.MembraneSynth({
         envelope: {
           attack: 0.001,
@@ -123,6 +138,7 @@ export class BITAudioGenerator {
         volume: this.dbToGain(this.config.soundLevel)
       }).toDestination()
 
+      console.log('BIT: Creating snare synth...')
       this.snareSynth = new Tone.NoiseSynth({
         noise: {
           type: 'white'
@@ -138,11 +154,22 @@ export class BITAudioGenerator {
 
       // 初期化完了
       this.isInitialized = true
-      console.log('BIT audio system initialized successfully')
+      console.log('BIT: Audio system initialized successfully')
     } catch (error) {
-      console.error('BIT audio initialization failed:', error)
+      console.error('BIT: Audio initialization failed:', error)
       this.isInitialized = false
-      throw new Error(`Failed to initialize BIT audio system: ${error}`)
+      
+      // リソースクリーンアップ
+      if (this.kickSynth) {
+        this.kickSynth.dispose()
+        this.kickSynth = null
+      }
+      if (this.snareSynth) {
+        this.snareSynth.dispose()
+        this.snareSynth = null
+      }
+      
+      throw new Error(`BIT audio initialization failed: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
