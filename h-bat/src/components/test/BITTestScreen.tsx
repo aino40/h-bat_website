@@ -84,27 +84,42 @@ export default function BITTestScreen({
   useEffect(() => {
     const initialize = async () => {
       try {
+        console.log('BITTestScreen: Starting initialization...')
         setTestState('initializing')
+        setError(null)
+        
+        // 既存のリソースをクリーンアップ
+        if (audioGenerator) {
+          audioGenerator.dispose()
+          setAudioGenerator(null)
+        }
         
         // オーディオジェネレータ初期化
+        console.log('BITTestScreen: Creating audio generator with hearing threshold:', config.hearingThreshold)
         const generator = new BITAudioGenerator({
           soundLevel: config.hearingThreshold + 30
         })
+        
+        console.log('BITTestScreen: Initializing audio generator...')
         await generator.initialize()
         setAudioGenerator(generator)
+        console.log('BITTestScreen: Audio generator initialized successfully')
 
         // ステアケースコントローラー初期化
+        console.log('BITTestScreen: Creating staircase controller...')
         const controller = new BITStaircaseController(
           config.sessionId,
           config.profileId,
           config.hearingThreshold
         )
         setStaircaseController(controller)
+        console.log('BITTestScreen: Staircase controller created successfully')
 
         setTestState('ready')
+        console.log('BITTestScreen: Initialization completed successfully')
       } catch (err) {
-        console.error('BIT test initialization failed:', err)
-        setError('テストの初期化に失敗しました')
+        console.error('BITTestScreen: Initialization failed:', err)
+        setError(`テストの初期化に失敗しました: ${err}`)
         setTestState('error')
         config.onError(err as Error)
       }
@@ -115,10 +130,11 @@ export default function BITTestScreen({
     // クリーンアップ
     return () => {
       if (audioGenerator) {
+        console.log('BITTestScreen: Cleaning up audio generator')
         audioGenerator.dispose()
       }
     }
-  }, [config])
+  }, [config, audioGenerator])
 
   // テスト完了
   const completeTest = useCallback(() => {

@@ -163,12 +163,21 @@ export function useBITTest(config: BITTestConfig): [BITTestState, BITTestActions
   // 初期化
   const initialize = useCallback(async () => {
     try {
+      console.log('Initializing BIT test...')
       setState(prev => ({ ...prev, hasError: false, errorMessage: null }))
+
+      // 既存のリソースを解放
+      if (audioGeneratorRef.current) {
+        audioGeneratorRef.current.dispose()
+        audioGeneratorRef.current = null
+      }
 
       // オーディオジェネレータ初期化
       const audioGenerator = new BITAudioGenerator({
         soundLevel: config.hearingThreshold + 30
       })
+      
+      console.log('Initializing BIT audio generator...')
       await audioGenerator.initialize()
       audioGeneratorRef.current = audioGenerator
 
@@ -185,8 +194,11 @@ export function useBITTest(config: BITTestConfig): [BITTestState, BITTestActions
         isInitialized: true,
         currentSlopeK: staircaseController.getCurrentSlopeK()
       }))
+      
+      console.log('BIT test initialized successfully')
     } catch (error) {
-      handleError(error as Error, 'テストの初期化に失敗しました')
+      console.error('BIT test initialization error:', error)
+      handleError(error as Error, 'BIT audio initialization failed')
     }
   }, [config, handleError])
 
@@ -232,16 +244,26 @@ export function useBITTest(config: BITTestConfig): [BITTestState, BITTestActions
     const audioGenerator = audioGeneratorRef.current
     const staircaseController = staircaseControllerRef.current
     
-    if (!audioGenerator || !staircaseController || state.isPlaying) return
+    if (!audioGenerator || !staircaseController || state.isPlaying) {
+      console.warn('BIT: playAudio called but conditions not met', {
+        hasAudioGenerator: !!audioGenerator,
+        hasStaircaseController: !!staircaseController,
+        isPlaying: state.isPlaying
+      })
+      return
+    }
 
     try {
+      console.log('BIT: Starting audio playback')
       setState(prev => ({ ...prev, isPlaying: true, lastAnswer: null, lastResult: null }))
 
       // 現在のIOI変化率を取得
       const currentSlopeK = staircaseController.getCurrentSlopeK()
+      console.log('BIT: Current slope K:', currentSlopeK)
       
       // ランダムな方向を生成
       const direction = audioGenerator.generateRandomDirection()
+      console.log('BIT: Generated direction:', direction)
 
       // 音源設定
       audioGenerator.setSlopeK(currentSlopeK)
@@ -258,7 +280,9 @@ export function useBITTest(config: BITTestConfig): [BITTestState, BITTestActions
       }))
       
       reactionStartTimeRef.current = Date.now()
+      console.log('BIT: Audio playback completed, waiting for user response')
     } catch (error) {
+      console.error('BIT: Audio playback error:', error)
       handleError(error as Error, '音声の再生に失敗しました')
     }
   }, [config.hearingThreshold, handleError, state.isPlaying])

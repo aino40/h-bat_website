@@ -42,21 +42,32 @@ export default function BITTestPage() {
 
   // セッション確認
   useEffect(() => {
-    if (!currentSession) {
-      console.warn('No active session found, redirecting to hearing test')
-      router.push('/test/hearing')
-      return
+    const initializePage = async () => {
+      if (!currentSession) {
+        console.warn('No active session found, redirecting to hearing test')
+        router.push('/test/hearing')
+        return
+      }
+
+      // 聴力閾値の確認
+      const hearingThreshold = getHearingThresholdAverage()
+      if (!hearingThreshold || hearingThreshold === 0) {
+        console.warn('No hearing threshold found, redirecting to hearing test')
+        router.push('/test/hearing')
+        return
+      }
+
+      try {
+        console.log('BIT page: Initializing with hearing threshold:', hearingThreshold)
+        setPageState('ready')
+      } catch (error) {
+        console.error('BIT page initialization error:', error)
+        setError('ページの初期化に失敗しました')
+        setPageState('error')
+      }
     }
 
-    // 聴力閾値の確認
-    const hearingThreshold = getHearingThresholdAverage()
-    if (!hearingThreshold || hearingThreshold === 0) {
-      console.warn('No hearing threshold found, redirecting to hearing test')
-      router.push('/test/hearing')
-      return
-    }
-
-    setPageState('ready')
+    initializePage()
   }, [currentSession, getHearingThresholdAverage, router])
 
   // BITテスト設定
@@ -154,8 +165,30 @@ export default function BITTestPage() {
   }
 
   // テスト開始
-  const handleStartTest = () => {
-    setPageState('testing')
+  const handleStartTest = async () => {
+    try {
+      console.log('BIT: Starting test, checking initialization...')
+      
+      // 初期化が完了するまで待機
+      if (!bitState.isInitialized) {
+        console.log('BIT: Not initialized, initializing...')
+        await bitActions.initialize()
+      }
+      
+      if (bitState.hasError) {
+        console.error('BIT: Test has error:', bitState.errorMessage)
+        setError(bitState.errorMessage || 'テストでエラーが発生しました')
+        setPageState('error')
+        return
+      }
+      
+      console.log('BIT: Test initialized successfully, starting...')
+      setPageState('testing')
+    } catch (err) {
+      console.error('BIT: Failed to start test:', err)
+      setError('テストの開始に失敗しました')
+      setPageState('error')
+    }
   }
 
   // ローディング状態
