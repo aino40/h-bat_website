@@ -370,6 +370,24 @@ export class BITAudioGenerator {
     }
   }
 
+  // 初期化状態確認
+  isReady(): boolean {
+    const ready = this.isInitialized && 
+                  this.kickSynth !== null && 
+                  this.snareSynth !== null &&
+                  Tone.context.state === 'running'
+    
+    console.log('BIT: isReady check:', {
+      isInitialized: this.isInitialized,
+      hasKickSynth: this.kickSynth !== null,
+      hasSnareSynth: this.snareSynth !== null,
+      contextState: Tone.context.state,
+      ready
+    })
+    
+    return ready
+  }
+
   // 現在の設定取得
   getCurrentConfig(): BITConfig {
     return { ...this.config }
