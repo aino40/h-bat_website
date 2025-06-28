@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import * as Tone from 'tone'
 import { 
   Play, 
   Pause, 
@@ -220,6 +221,13 @@ export default function BITTestScreen({
         hearingThreshold: config.hearingThreshold
       })
 
+      // ユーザーインタラクションによるTone.js開始を確実にする
+      if (Tone.context.state !== 'running') {
+        console.log('BITTestScreen: Starting Tone.js context due to user interaction...')
+        await Tone.start()
+        console.log('BITTestScreen: Tone.js context started, state:', Tone.context.state)
+      }
+
       setIsPlaying(true)
       setTestState('playing')
       setLastAnswer(null)
@@ -229,18 +237,38 @@ export default function BITTestScreen({
       const currentSlopeK = staircaseController.getCurrentSlopeK()
       console.log('BITTestScreen: Current slope K:', currentSlopeK)
       
+      // 値の安全性チェック
+      if (!isFinite(currentSlopeK) || currentSlopeK <= 0) {
+        throw new Error(`Invalid slope K value: ${currentSlopeK}`)
+      }
+      
       // ランダムな方向を生成
       const direction = audioGenerator.generateRandomDirection()
       setCurrentDirection(direction)
+      console.log('BITTestScreen: Generated direction:', direction)
+
+      // 聴力閾値の検証
+      const validHearingThreshold = isFinite(config.hearingThreshold) && config.hearingThreshold > 0 
+        ? config.hearingThreshold 
+        : 50
+      console.log('BITTestScreen: Using hearing threshold:', validHearingThreshold)
 
       // 音源設定
       audioGenerator.setSlopeK(currentSlopeK)
       audioGenerator.setDirection(direction)
-      audioGenerator.setSoundLevel(config.hearingThreshold + 30)
+      audioGenerator.setSoundLevel(validHearingThreshold + 30)
+
+      // 音響システムの準備状況を再確認
+      if (!audioGenerator.isReady()) {
+        console.warn('BITTestScreen: Audio generator not ready, reinitializing...')
+        await audioGenerator.initialize()
+      }
 
       // 音声再生
+      console.log('BITTestScreen: Starting pattern playback...')
       await audioGenerator.playPattern()
       
+      console.log('BITTestScreen: Pattern playback completed')
       setIsPlaying(false)
       setTestState('waiting')
       setReactionStartTime(Date.now())
@@ -254,8 +282,10 @@ export default function BITTestScreen({
           userMessage = 'オーディオシステムの初期化に失敗しました。ページをリロードしてください。'
         } else if (err.message.includes('permission')) {
           userMessage = 'オーディオの再生権限が必要です。ブラウザの設定を確認してください。'
-        } else if (err.message.includes('initialization')) {
+        } else if (err.message.includes('initialization') || err.message.includes('not initialized')) {
           userMessage = 'オーディオシステムが正しく初期化されていません。しばらく待ってから再試行してください。'
+        } else if (err.message.includes('Invalid')) {
+          userMessage = 'テストパラメータに問題があります。テストを再開してください。'
         }
       }
       

@@ -131,7 +131,7 @@ export class BITAudioGenerator {
       console.log('BIT: Safe volume calculated:', safeVolume)
 
       // 合成音源初期化
-      console.log('BIT: Creating kick synth...')
+      console.log('BIT: Creating kick synth with volume:', safeVolume)
       this.kickSynth = new Tone.MembraneSynth({
         envelope: {
           attack: 0.001,
@@ -141,8 +141,14 @@ export class BITAudioGenerator {
         },
         volume: safeVolume
       }).toDestination()
+      
+      // キック音源の検証
+      if (!this.kickSynth || !this.kickSynth.volume) {
+        throw new Error('Failed to create kick synth')
+      }
+      console.log('BIT: Kick synth created successfully')
 
-      console.log('BIT: Creating snare synth...')
+      console.log('BIT: Creating snare synth with volume:', safeVolume)
       this.snareSynth = new Tone.NoiseSynth({
         noise: {
           type: 'white'
@@ -155,6 +161,12 @@ export class BITAudioGenerator {
         },
         volume: safeVolume
       }).toDestination()
+      
+      // スネア音源の検証
+      if (!this.snareSynth || !this.snareSynth.volume) {
+        throw new Error('Failed to create snare synth')
+      }
+      console.log('BIT: Snare synth created successfully')
 
       // 初期化完了
       this.isInitialized = true
@@ -258,8 +270,34 @@ export class BITAudioGenerator {
 
   // IOIシーケンス生成
   generateIOISequence(): number[] {
-    this.currentIOISequence = generateIOISequence(this.config)
-    return this.currentIOISequence
+    try {
+      console.log('BIT: Generating IOI sequence with config:', {
+        baseIOI: this.config.baseIOI,
+        slopeK: this.config.slopeK,
+        direction: this.config.direction,
+        numBeats: this.config.numBeats
+      })
+      
+      this.currentIOISequence = generateIOISequence(this.config)
+      
+      // 生成されたシーケンスの検証
+      if (!this.currentIOISequence.length) {
+        throw new Error('Empty IOI sequence generated')
+      }
+      
+      const invalidValues = this.currentIOISequence.filter(ioi => !isFinite(ioi) || ioi <= 0)
+      if (invalidValues.length > 0) {
+        throw new Error(`Invalid IOI values found: ${invalidValues.join(', ')}`)
+      }
+      
+      console.log('BIT: IOI sequence generated successfully, length:', this.currentIOISequence.length)
+      return this.currentIOISequence
+    } catch (error) {
+      console.error('BIT: Error generating IOI sequence:', error)
+      // フォールバック: 一定のIOIシーケンス
+      this.currentIOISequence = Array(this.config.numBeats).fill(this.config.baseIOI)
+      return this.currentIOISequence
+    }
   }
 
   // ランダム方向生成
@@ -279,6 +317,8 @@ export class BITAudioGenerator {
     }
 
     try {
+      console.log('BIT: Starting pattern playback...')
+      
       // 既存のパートを停止・破棄
       if (this.part) {
         this.part.stop()
@@ -286,35 +326,44 @@ export class BITAudioGenerator {
         this.part = null
       }
 
-      // Tone.js コンテキストの確認
+      // Transportを停止してクリーンアップ
+      Tone.Transport.stop()
+      Tone.Transport.cancel()
+      
+      // 少し待機してからコンテキストを確認
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Tone.js コンテキストの確認と開始
       if (Tone.context.state !== 'running') {
+        console.log('BIT: Starting Tone.js context...')
         await Tone.start()
+        console.log('BIT: Tone.js context started, state:', Tone.context.state)
       }
 
       // IOIシーケンス生成
       const ioiSequence = this.generateIOISequence()
-      console.log('BIT: Generated IOI sequence:', ioiSequence)
+      console.log('BIT: Generated IOI sequence (first 5):', ioiSequence.slice(0, 5))
       
       // 値の検証
       if (!ioiSequence.every(ioi => isFinite(ioi) && ioi > 0)) {
         throw new Error('Invalid IOI sequence generated')
       }
       
-      // パート作成
-      const events: Array<{ time: string; ioi: number; index: number }> = []
-      let cumulativeTime = 0
+      // パート作成 - 絶対時間を使用
+      const events: Array<{ time: number; ioi: number; index: number }> = []
+      let cumulativeTime = 0.1 // 100ms後に開始
 
       for (let i = 0; i < ioiSequence.length; i++) {
         const ioi = ioiSequence[i]!
         events.push({
-          time: `+${cumulativeTime / 1000}`, // 秒に変換
+          time: cumulativeTime,
           ioi,
           index: i
         })
-        cumulativeTime += ioi
+        cumulativeTime += ioi / 1000 // msを秒に変換
       }
 
-      console.log('BIT: Created events:', events.slice(0, 3), '...')
+      console.log('BIT: Created events (first 3):', events.slice(0, 3))
 
       this.part = new Tone.Part((time, event) => {
         try {
@@ -328,10 +377,12 @@ export class BITAudioGenerator {
           if (event.index % 2 === 0) {
             if (this.kickSynth) {
               this.kickSynth.triggerAttackRelease('C2', '8n', time)
+              console.log(`BIT: Playing kick at ${time}, index ${event.index}`)
             }
           } else {
             if (this.snareSynth) {
               this.snareSynth.triggerAttackRelease('8n', time)
+              console.log(`BIT: Playing snare at ${time}, index ${event.index}`)
             }
           }
         } catch (error) {
@@ -339,32 +390,46 @@ export class BITAudioGenerator {
         }
       }, events)
 
-      // 再生開始
-      this.part.start('+0.1')
+      // パートの設定
+      this.part.loop = false
+      this.part.start(0)
+      
+      // Transport開始
       Tone.Transport.start()
-
-      console.log('BIT: Pattern playback started')
+      
+      console.log('BIT: Pattern playback started successfully')
+      console.log('BIT: Transport state:', Tone.Transport.state)
+      console.log('BIT: Context state:', Tone.context.state)
 
       // 指定時間後に自動停止
       setTimeout(() => {
+        console.log('BIT: Auto-stopping pattern after', this.config.duration, 'seconds')
         this.stopPattern()
-      }, this.config.duration * 1000)
+      }, this.config.duration * 1000 + 500) // 少し余裕を持たせる
     } catch (error) {
       console.error('BIT: Error in playPattern:', error)
-      throw new Error(`Failed to play BIT pattern: ${error}`)
+      throw new Error(`Failed to play BIT pattern: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
   // パターン停止
   stopPattern(): void {
     try {
+      console.log('BIT: Stopping pattern...')
+      
       if (this.part) {
         this.part.stop()
         this.part.dispose()
         this.part = null
+        console.log('BIT: Part stopped and disposed')
       }
+      
+      // Transportを停止してクリーンアップ
       Tone.Transport.stop()
-      console.log('BIT: Pattern stopped')
+      Tone.Transport.cancel()
+      console.log('BIT: Transport stopped and cancelled')
+      
+      console.log('BIT: Pattern stopped successfully')
     } catch (error) {
       console.error('BIT: Error stopping pattern:', error)
     }
