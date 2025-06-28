@@ -384,7 +384,7 @@ export function useBFITTest(config: BFITTestConfig) {
   useEffect(() => {
     initialize()
     return cleanup
-  }, [initialize, cleanup])
+  }, []) // 依存関係を空にして初回のみ実行
 
   return {
     // 状態

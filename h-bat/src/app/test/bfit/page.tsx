@@ -54,13 +54,6 @@ export default function BFITTestPage() {
     error 
   })
 
-  console.log('BFIT Page: Current state', { 
-    pageState, 
-    hasCurrentSession: !!currentSession,
-    sessionId: currentSession?.sessionId,
-    error 
-  })
-
   // セッション確認
   useEffect(() => {
     const initializePage = async () => {
@@ -126,11 +119,11 @@ export default function BFITTestPage() {
     initializePage()
   }, [currentSession, router, getAverageHearingThreshold])
 
-  // BFIT測定設定
-  const hearingThreshold = getAverageHearingThreshold() || 40
-  const bfitConfig = {
-    sessionId: currentSession?.sessionId || '',
-    profileId: currentSession?.profileId || '',
+  // BFIT測定設定（セッションがある場合のみ）
+  const hearingThreshold = getAverageHearingThreshold() || 50
+  const bfitConfig = currentSession ? {
+    sessionId: currentSession.sessionId,
+    profileId: currentSession.profileId || 'default',
     hearingThreshold,
     baseTempo: 120,
     patternDuration: 8,
@@ -139,7 +132,7 @@ export default function BFITTestPage() {
       try {
         // 試行データをZustandストアに保存
         recordBFITTrial({
-          sessionId: currentSession?.sessionId || '',
+          sessionId: currentSession.sessionId,
           trialIndex: trial.trialIndex,
           slopeK: trial.slopeK,
           direction: trial.direction,
@@ -160,7 +153,7 @@ export default function BFITTestPage() {
       try {
         // 結果データをZustandストアに保存
         setBFITResult({
-          sessionId: currentSession?.sessionId || '',
+          sessionId: currentSession.sessionId,
           slopeThreshold: result.slopeThreshold,
           confidence: result.convergenceAnalysis.confidence,
           directionAccuracy: {
@@ -193,22 +186,30 @@ export default function BFITTestPage() {
       setError(err.message)
       setPageState('error')
     }
-  }
+  } : null
 
-  // BFIT測定フック
+  // BFIT測定フック（設定がある場合のみ）
+  const hookResult = bfitConfig ? useBFITTest(bfitConfig) : null
   const {
     result: testResult,
     reset,
     state: hookState,
     progress: hookProgress,
     error: hookError
-  } = useBFITTest(bfitConfig)
+  } = hookResult || {
+    result: null,
+    reset: () => {},
+    state: 'initializing' as const,
+    progress: null,
+    error: null
+  }
 
   console.log('BFIT Page: Hook state', { 
     hookState,
     hasTestResult: !!testResult,
     hookError: hookError?.message,
-    hookProgress 
+    hookProgress,
+    hasBfitConfig: !!bfitConfig
   })
 
   // 結果分析フック
@@ -289,7 +290,7 @@ export default function BFITTestPage() {
   }
 
   // 測定中
-  if (pageState === 'testing') {
+  if (pageState === 'testing' && bfitConfig) {
     return (
       <BFITTestScreen
         config={bfitConfig}
