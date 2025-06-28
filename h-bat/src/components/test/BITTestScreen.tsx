@@ -214,6 +214,12 @@ export default function BITTestScreen({
     if (!audioGenerator || !staircaseController || isPlaying) return
 
     try {
+      console.log('BITTestScreen: Starting audio playback...', {
+        audioGeneratorReady: audioGenerator.isReady(),
+        staircaseControllerReady: !!staircaseController,
+        hearingThreshold: config.hearingThreshold
+      })
+
       setIsPlaying(true)
       setTestState('playing')
       setLastAnswer(null)
@@ -221,6 +227,7 @@ export default function BITTestScreen({
 
       // 現在のIOI変化率を取得
       const currentSlopeK = staircaseController.getCurrentSlopeK()
+      console.log('BITTestScreen: Current slope K:', currentSlopeK)
       
       // ランダムな方向を生成
       const direction = audioGenerator.generateRandomDirection()
@@ -238,10 +245,24 @@ export default function BITTestScreen({
       setTestState('waiting')
       setReactionStartTime(Date.now())
     } catch (err) {
-      console.error('Audio playback failed:', err)
-      setError('音声の再生に失敗しました')
+      console.error('BITTestScreen: Audio playback failed:', err)
+      
+      // ユーザーフレンドリーなエラーメッセージ
+      let userMessage = '音声の再生に失敗しました'
+      if (err instanceof Error) {
+        if (err.message.includes('context')) {
+          userMessage = 'オーディオシステムの初期化に失敗しました。ページをリロードしてください。'
+        } else if (err.message.includes('permission')) {
+          userMessage = 'オーディオの再生権限が必要です。ブラウザの設定を確認してください。'
+        } else if (err.message.includes('initialization')) {
+          userMessage = 'オーディオシステムが正しく初期化されていません。しばらく待ってから再試行してください。'
+        }
+      }
+      
+      setError(userMessage)
       setTestState('error')
       setIsPlaying(false)
+      config.onError(err as Error)
     }
   }
 

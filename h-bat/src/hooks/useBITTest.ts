@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import * as Tone from 'tone'
 import { BITAudioGenerator } from '@/lib/audio/bit'
 import { 
   BITStaircaseController, 
@@ -251,6 +252,13 @@ export function useBITTest(config: BITTestConfig): [BITTestState, BITTestActions
     const audioGenerator = audioGeneratorRef.current
     const staircaseController = staircaseControllerRef.current
     
+    console.log('BIT: playAudio called', {
+      hasAudioGenerator: !!audioGenerator,
+      hasStaircaseController: !!staircaseController,
+      isPlaying: state.isPlaying,
+      isInitialized: audioGenerator?.isReady() || false
+    })
+    
     if (!audioGenerator || !staircaseController || state.isPlaying) {
       console.warn('BIT: playAudio called but conditions not met', {
         hasAudioGenerator: !!audioGenerator,
@@ -263,6 +271,14 @@ export function useBITTest(config: BITTestConfig): [BITTestState, BITTestActions
     try {
       console.log('BIT: Starting audio playback')
       setState(prev => ({ ...prev, isPlaying: true, lastAnswer: null, lastResult: null }))
+
+      // ユーザー操作によるTone.js開始を確実に実行
+      console.log('BIT: Ensuring Tone.js context is running...')
+      if (Tone.context.state !== 'running') {
+        console.log('BIT: Tone.js context not running, starting with user gesture...')
+        await Tone.start()
+        console.log('BIT: Tone.js context started successfully')
+      }
 
       // 現在のIOI変化率を取得
       const currentSlopeK = staircaseController.getCurrentSlopeK()
@@ -282,11 +298,18 @@ export function useBITTest(config: BITTestConfig): [BITTestState, BITTestActions
         ? config.hearingThreshold 
         : 50
 
+      console.log('BIT: Setting audio parameters...', {
+        slopeK: currentSlopeK,
+        direction,
+        soundLevel: validHearingThreshold + 30
+      })
+
       // 音源設定
       audioGenerator.setSlopeK(currentSlopeK)
       audioGenerator.setDirection(direction)
       audioGenerator.setSoundLevel(validHearingThreshold + 30)
 
+      console.log('BIT: Starting pattern playback...')
       // 音声再生
       await audioGenerator.playPattern()
       
@@ -300,7 +323,18 @@ export function useBITTest(config: BITTestConfig): [BITTestState, BITTestActions
       console.log('BIT: Audio playback completed, waiting for user response')
     } catch (error) {
       console.error('BIT: Audio playback error:', error)
-      handleError(error as Error, '音声の再生に失敗しました')
+      setState(prev => ({ ...prev, isPlaying: false }))
+      
+      // より詳細なエラー情報
+      const errorDetails = {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        toneContextState: Tone.context.state,
+        audioGeneratorInitialized: audioGenerator?.isReady() || false,
+        hearingThreshold: config.hearingThreshold
+      }
+      console.error('BIT: Detailed error information:', errorDetails)
+      
+      handleError(error as Error, `音声の再生に失敗しました: ${errorDetails.errorMessage}`)
     }
   }, [config.hearingThreshold, handleError, state.isPlaying])
 
