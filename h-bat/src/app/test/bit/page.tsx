@@ -213,12 +213,23 @@ export default function BITTestPage() {
 
   // 次のテストへ進む
   const handleNext = async () => {
-    if (!currentSession || !bitState.finalResult) return
+    console.log('BIT: handleNext called', { 
+      hasCurrentSession: !!currentSession, 
+      hasFinalResult: !!bitState.finalResult,
+      sessionId: currentSession?.sessionId 
+    })
+    
+    if (!currentSession || !bitState.finalResult) {
+      console.warn('BIT: Missing session or final result, cannot proceed')
+      return
+    }
 
     try {
+      console.log('BIT: Completing test...')
       // テスト完了をマーク
       await completeTest('bit')
       
+      console.log('BIT: Test completed, navigating to BFIT...')
       // 次のテスト（BFIT）へ
       router.push('/test/bfit')
     } catch (err) {

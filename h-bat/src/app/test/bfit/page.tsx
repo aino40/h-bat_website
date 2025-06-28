@@ -34,6 +34,7 @@ type PageState = 'loading' | 'ready' | 'testing' | 'results' | 'error'
 
 // BFIT測定ページ
 export default function BFITTestPage() {
+  console.log('BFIT Page: Component mounting/rendering')
   const router = useRouter()
   const [pageState, setPageState] = useState<PageState>('loading')
   const [error, setError] = useState<string | null>(null)
@@ -46,53 +47,83 @@ export default function BFITTestPage() {
     setBFITResult 
   } = useStaircaseStore()
 
+  console.log('BFIT Page: Current state', { 
+    pageState, 
+    hasCurrentSession: !!currentSession,
+    sessionId: currentSession?.sessionId,
+    error 
+  })
+
+  console.log('BFIT Page: Current state', { 
+    pageState, 
+    hasCurrentSession: !!currentSession,
+    sessionId: currentSession?.sessionId,
+    error 
+  })
+
   // セッション確認
   useEffect(() => {
-    if (!currentSession) {
-      router.push('/test')
-      return
-    }
+    const initializePage = async () => {
+      console.log('BFIT Page: Initializing page...', {
+        hasCurrentSession: !!currentSession,
+        sessionId: currentSession?.sessionId,
+        hearingTestCompleted: currentSession?.hearingTest?.isCompleted,
+        hearingTestResults: currentSession?.hearingTest?.results?.size || 0
+      })
 
-    console.log('BFIT Page: Checking hearing threshold...', {
-      hasCurrentSession: !!currentSession,
-      sessionId: currentSession?.sessionId
-    })
+      if (!currentSession) {
+        console.warn('BFIT Page: No active session found, redirecting to hearing test')
+        router.push('/test/hearing')
+        return
+      }
 
-    const hearingThreshold = getAverageHearingThreshold()
-    console.log('BFIT Page: Hearing threshold from store:', hearingThreshold)
+      // 聴力閾値の確認 - より詳細なデバッグ
+      const hearingThresholdFromStore = getAverageHearingThreshold()
+      console.log('BFIT Page: Hearing threshold check:', {
+        rawThreshold: hearingThresholdFromStore,
+        isValid: hearingThresholdFromStore && hearingThresholdFromStore > 0 && isFinite(hearingThresholdFromStore),
+        sessionHearingResults: currentSession.hearingTest?.results ? 
+          Array.from(currentSession.hearingTest.results.entries()) : 'No results'
+      })
 
-    // staircaseStoreから取得できない場合、localStorageから取得を試行
-    let finalThreshold = hearingThreshold
-    if (!finalThreshold || finalThreshold <= 0 || !isFinite(finalThreshold)) {
-      try {
-        const storedThresholds = localStorage.getItem('h-bat-hearing-thresholds')
-        if (storedThresholds) {
-          const thresholds = JSON.parse(storedThresholds)
-          console.log('BFIT Page: Found stored thresholds:', thresholds)
-          
-          if (typeof thresholds === 'object' && thresholds !== null) {
-            const values = Object.values(thresholds).filter((val): val is number => 
-              typeof val === 'number' && isFinite(val) && val > 0
-            )
+      // staircaseStoreから取得できない場合、localStorageから取得を試行
+      let finalThreshold = hearingThresholdFromStore
+      if (!finalThreshold || finalThreshold <= 0 || !isFinite(finalThreshold)) {
+        console.log('BFIT Page: Store threshold invalid, trying localStorage...')
+        
+        try {
+          const storedThresholds = localStorage.getItem('h-bat-hearing-thresholds')
+          if (storedThresholds) {
+            const thresholds = JSON.parse(storedThresholds)
+            console.log('BFIT Page: Found stored thresholds:', thresholds)
             
-            if (values.length > 0) {
-              finalThreshold = values.reduce((sum, val) => sum + val, 0) / values.length
-              console.log('BFIT Page: Using localStorage hearing threshold:', finalThreshold)
+            if (typeof thresholds === 'object' && thresholds !== null) {
+              const values = Object.values(thresholds).filter((val): val is number => 
+                typeof val === 'number' && isFinite(val) && val > 0
+              )
+              
+              if (values.length > 0) {
+                finalThreshold = values.reduce((sum, val) => sum + val, 0) / values.length
+                console.log('BFIT Page: Using localStorage hearing threshold:', finalThreshold)
+              }
             }
           }
+        } catch (error) {
+          console.warn('BFIT Page: Error reading stored thresholds:', error)
         }
-      } catch (error) {
-        console.warn('BFIT Page: Error reading stored thresholds:', error)
       }
+
+      // 最終的にもデータがない場合のフォールバック
+      if (!finalThreshold || finalThreshold <= 0 || !isFinite(finalThreshold)) {
+        console.warn('BFIT Page: No valid hearing threshold found, using default')
+        finalThreshold = 50 // より現実的なデフォルト値
+      }
+
+      console.log('BFIT Page: Final hearing threshold:', finalThreshold)
+      setPageState('ready')
     }
 
-    if (!finalThreshold || finalThreshold <= 0 || !isFinite(finalThreshold)) {
-      console.warn('BFIT Page: No valid hearing threshold found, using default')
-      finalThreshold = 50 // デフォルト値
-    }
-
-    console.log('BFIT Page: Final hearing threshold:', finalThreshold)
-    setPageState('ready')
+    initializePage()
   }, [currentSession, router, getAverageHearingThreshold])
 
   // BFIT測定設定
@@ -167,8 +198,18 @@ export default function BFITTestPage() {
   // BFIT測定フック
   const {
     result: testResult,
-    reset
+    reset,
+    state: hookState,
+    progress: hookProgress,
+    error: hookError
   } = useBFITTest(bfitConfig)
+
+  console.log('BFIT Page: Hook state', { 
+    hookState,
+    hasTestResult: !!testResult,
+    hookError: hookError?.message,
+    hookProgress 
+  })
 
   // 結果分析フック
   const resultAnalysis = useBFITTestResult(testResult)
@@ -190,11 +231,12 @@ export default function BFITTestPage() {
 
   // 次へ進む
   const handleNext = () => {
-    router.push('/test/results')
+    router.push('/results')
   }
 
   // 読み込み中
   if (pageState === 'loading') {
+    console.log('BFIT Page: Rendering loading state')
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -206,6 +248,9 @@ export default function BFITTestPage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">読み込み中...</h3>
                 <p className="text-gray-600">BFITテストを準備しています</p>
+                <p className="text-xs text-gray-500 mt-2">
+                  デバッグ: セッション={!!currentSession ? '有' : '無'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -255,6 +300,7 @@ export default function BFITTestPage() {
 
   // 結果表示
   if (pageState === 'results' && testResult) {
+    console.log('BFIT Page: Rendering results state', { testResult })
     const quality = evaluateBFITQuality(testResult)
     
     return (
@@ -523,6 +569,12 @@ export default function BFITTestPage() {
   }
 
   // 準備完了状態
+  console.log('BFIT Page: Rendering ready state', { 
+    pageState, 
+    currentSession: !!currentSession,
+    hookState,
+    hasTestResult: !!testResult
+  })
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
       {/* ヘッダー */}

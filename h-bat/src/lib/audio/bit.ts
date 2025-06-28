@@ -105,90 +105,56 @@ export class BITAudioGenerator {
       console.log('BIT: Starting audio initialization...')
       
       // Tone.js開始
-      console.log('BIT: Current Tone.js context state:', Tone.context.state)
       if (Tone.context.state !== 'running') {
         console.log('BIT: Starting Tone.js context...')
         await Tone.start()
-        console.log('BIT: Tone.js context started, new state:', Tone.context.state)
+        console.log('BIT: Tone.js context started')
       }
 
       // 既存の音源を破棄
       if (this.kickSynth) {
         console.log('BIT: Disposing existing kick synth')
-        try {
-          this.kickSynth.dispose()
-        } catch (disposeError) {
-          console.warn('BIT: Error disposing kick synth:', disposeError)
-        }
+        this.kickSynth.dispose()
         this.kickSynth = null
       }
       if (this.snareSynth) {
         console.log('BIT: Disposing existing snare synth')
-        try {
-          this.snareSynth.dispose()
-        } catch (disposeError) {
-          console.warn('BIT: Error disposing snare synth:', disposeError)
-        }
+        this.snareSynth.dispose()
         this.snareSynth = null
       }
 
       // 少し待機
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       // 安全な音量レベルを計算
       const safeVolume = this.dbToGain(this.config.soundLevel)
-      console.log('BIT: Safe volume calculated:', {
-        inputSoundLevel: this.config.soundLevel,
-        calculatedVolume: safeVolume,
-        isFinite: isFinite(safeVolume),
-        inRange: safeVolume >= 0.001 && safeVolume <= 1.0
-      })
+      console.log('BIT: Safe volume calculated:', safeVolume)
 
       // 合成音源初期化
       console.log('BIT: Creating kick synth...')
-      try {
-        this.kickSynth = new Tone.MembraneSynth({
-          envelope: {
-            attack: 0.001,
-            decay: 0.3,
-            sustain: 0,
-            release: 0.3
-          },
-          volume: safeVolume
-        }).toDestination()
-        console.log('BIT: Kick synth created successfully')
-      } catch (kickError) {
-        console.error('BIT: Error creating kick synth:', kickError)
-        throw new Error(`Failed to create kick synth: ${kickError}`)
-      }
+      this.kickSynth = new Tone.MembraneSynth({
+        envelope: {
+          attack: 0.001,
+          decay: 0.3,
+          sustain: 0,
+          release: 0.3
+        },
+        volume: safeVolume
+      }).toDestination()
 
       console.log('BIT: Creating snare synth...')
-      try {
-        this.snareSynth = new Tone.NoiseSynth({
-          noise: {
-            type: 'white'
-          },
-          envelope: {
-            attack: 0.001,
-            decay: 0.2,
-            sustain: 0,
-            release: 0.2
-          },
-          volume: safeVolume
-        }).toDestination()
-        console.log('BIT: Snare synth created successfully')
-      } catch (snareError) {
-        console.error('BIT: Error creating snare synth:', snareError)
-        throw new Error(`Failed to create snare synth: ${snareError}`)
-      }
-
-      // 音源の接続確認
-      console.log('BIT: Verifying synth connections...', {
-        kickSynthConnected: this.kickSynth?.context === Tone.context,
-        snareSynthConnected: this.snareSynth?.context === Tone.context,
-        kickSynthVolume: this.kickSynth?.volume.value,
-        snareSynthVolume: this.snareSynth?.volume.value
-      })
+      this.snareSynth = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
+        },
+        envelope: {
+          attack: 0.001,
+          decay: 0.2,
+          sustain: 0,
+          release: 0.2
+        },
+        volume: safeVolume
+      }).toDestination()
 
       // 初期化完了
       this.isInitialized = true
@@ -199,19 +165,11 @@ export class BITAudioGenerator {
       
       // リソースクリーンアップ
       if (this.kickSynth) {
-        try {
-          this.kickSynth.dispose()
-        } catch (cleanupError) {
-          console.warn('BIT: Error during kick synth cleanup:', cleanupError)
-        }
+        this.kickSynth.dispose()
         this.kickSynth = null
       }
       if (this.snareSynth) {
-        try {
-          this.snareSynth.dispose()
-        } catch (cleanupError) {
-          console.warn('BIT: Error during snare synth cleanup:', cleanupError)
-        }
+        this.snareSynth.dispose()
         this.snareSynth = null
       }
       
@@ -311,123 +269,60 @@ export class BITAudioGenerator {
 
   // BITパターン再生
   async playPattern(): Promise<void> {
-    console.log('BIT: playPattern() called', {
-      isInitialized: this.isInitialized,
-      kickSynth: !!this.kickSynth,
-      snareSynth: !!this.snareSynth,
-      toneContextState: Tone.context.state
-    })
-
     if (!this.isInitialized || !this.kickSynth || !this.snareSynth) {
-      const errorDetails = {
+      console.error('BIT audio generator not initialized', {
         isInitialized: this.isInitialized,
         kickSynth: !!this.kickSynth,
         snareSynth: !!this.snareSynth
-      }
-      console.error('BIT audio generator not initialized', errorDetails)
-      throw new Error(`BIT audio generator not initialized: ${JSON.stringify(errorDetails)}`)
+      })
+      throw new Error('BIT audio generator not initialized')
     }
 
     try {
-      // Tone.js コンテキストの状態確認と復旧
-      console.log('BIT: Checking Tone.js context state:', Tone.context.state)
-      if (Tone.context.state !== 'running') {
-        console.log('BIT: Tone.js context not running, attempting to start...')
-        try {
-          await Tone.start()
-          console.log('BIT: Tone.js context started successfully')
-        } catch (contextError) {
-          console.error('BIT: Failed to start Tone.js context:', contextError)
-          throw new Error(`Tone.js context start failed: ${contextError}`)
-        }
-      }
-
       // 既存のパートを停止・破棄
       if (this.part) {
-        console.log('BIT: Stopping and disposing existing part')
-        try {
-          this.part.stop()
-          this.part.dispose()
-          this.part = null
-        } catch (partError) {
-          console.warn('BIT: Error disposing existing part:', partError)
-        }
+        this.part.stop()
+        this.part.dispose()
+        this.part = null
       }
 
-      // Transport停止
-      try {
-        Tone.Transport.stop()
-        Tone.Transport.cancel()
-        console.log('BIT: Transport stopped and cleared')
-      } catch (transportError) {
-        console.warn('BIT: Error stopping transport:', transportError)
+      // Tone.js コンテキストの確認
+      if (Tone.context.state !== 'running') {
+        await Tone.start()
       }
 
       // IOIシーケンス生成
-      console.log('BIT: Generating IOI sequence...')
       const ioiSequence = this.generateIOISequence()
-      console.log('BIT: Generated IOI sequence:', {
-        length: ioiSequence.length,
-        first5: ioiSequence.slice(0, 5),
-        allFinite: ioiSequence.every(ioi => isFinite(ioi)),
-        allPositive: ioiSequence.every(ioi => ioi > 0)
-      })
+      console.log('BIT: Generated IOI sequence:', ioiSequence)
       
       // 値の検証
       if (!ioiSequence.every(ioi => isFinite(ioi) && ioi > 0)) {
-        const invalidValues = ioiSequence.filter(ioi => !isFinite(ioi) || ioi <= 0)
-        console.error('BIT: Invalid IOI values found:', invalidValues)
-        throw new Error(`Invalid IOI sequence generated: ${invalidValues.length} invalid values`)
+        throw new Error('Invalid IOI sequence generated')
       }
       
       // パート作成
-      console.log('BIT: Creating Tone.Part events...')
       const events: Array<{ time: string; ioi: number; index: number }> = []
       let cumulativeTime = 0
 
       for (let i = 0; i < ioiSequence.length; i++) {
         const ioi = ioiSequence[i]!
-        const timeInSeconds = cumulativeTime / 1000
-        
-        // 時間値の検証
-        if (!isFinite(timeInSeconds) || timeInSeconds < 0) {
-          console.error('BIT: Invalid time value calculated:', { i, ioi, cumulativeTime, timeInSeconds })
-          throw new Error(`Invalid time value at index ${i}: ${timeInSeconds}`)
-        }
-        
         events.push({
-          time: `+${timeInSeconds}`, // 秒に変換
+          time: `+${cumulativeTime / 1000}`, // 秒に変換
           ioi,
           index: i
         })
         cumulativeTime += ioi
       }
 
-      console.log('BIT: Created events:', {
-        totalEvents: events.length,
-        duration: cumulativeTime / 1000,
-        first3Events: events.slice(0, 3)
-      })
+      console.log('BIT: Created events:', events.slice(0, 3), '...')
 
-      // 音源の状態確認
-      console.log('BIT: Checking synth states...', {
-        kickSynthVolume: this.kickSynth.volume.value,
-        snareSynthVolume: this.snareSynth.volume.value,
-        kickSynthConnected: this.kickSynth.context === Tone.context,
-        snareSynthConnected: this.snareSynth.context === Tone.context
-      })
-
-      // Tone.Part作成
-      console.log('BIT: Creating Tone.Part...')
       this.part = new Tone.Part((time, event) => {
         try {
           // 時間値の検証
           if (!isFinite(time) || time < 0) {
-            console.warn('BIT: Invalid time value in callback:', time)
+            console.warn('BIT: Invalid time value:', time)
             return
           }
-
-          console.log(`BIT: Playing sound at time ${time}, index ${event.index}`)
 
           // キックとスネアを交互に再生
           if (event.index % 2 === 0) {
@@ -439,45 +334,24 @@ export class BITAudioGenerator {
               this.snareSynth.triggerAttackRelease('8n', time)
             }
           }
-        } catch (playbackError) {
-          console.error('BIT: Error during sound playback:', playbackError)
+        } catch (error) {
+          console.error('BIT: Error during sound playback:', error)
         }
       }, events)
 
-      console.log('BIT: Tone.Part created successfully')
-
       // 再生開始
-      console.log('BIT: Starting playback...')
       this.part.start('+0.1')
       Tone.Transport.start()
 
-      console.log('BIT: Pattern playback started successfully')
+      console.log('BIT: Pattern playback started')
 
       // 指定時間後に自動停止
-      const stopTimeout = setTimeout(() => {
-        console.log('BIT: Auto-stopping pattern after duration')
+      setTimeout(() => {
         this.stopPattern()
       }, this.config.duration * 1000)
-
-      // タイムアウトIDを保存（必要に応じて）
-      // this.stopTimeoutId = stopTimeout
-
     } catch (error) {
       console.error('BIT: Error in playPattern:', error)
-      
-      // エラー時のクリーンアップ
-      try {
-        if (this.part) {
-          this.part.stop()
-          this.part.dispose()
-          this.part = null
-        }
-        Tone.Transport.stop()
-      } catch (cleanupError) {
-        console.warn('BIT: Error during cleanup:', cleanupError)
-      }
-      
-      throw new Error(`Failed to play BIT pattern: ${error instanceof Error ? error.message : String(error)}`)
+      throw new Error(`Failed to play BIT pattern: ${error}`)
     }
   }
 
@@ -496,13 +370,8 @@ export class BITAudioGenerator {
     }
   }
 
-  // 初期化状態確認
-  isReady(): boolean {
-    return this.isInitialized && !!this.kickSynth && !!this.snareSynth
-  }
-
   // 現在の設定取得
-  getConfig(): BITConfig {
+  getCurrentConfig(): BITConfig {
     return { ...this.config }
   }
 

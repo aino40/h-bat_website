@@ -1,0 +1,42 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  deploy-check:
+    name: Deploy Check
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: h-bat/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: h-bat
+        run: npm ci
+        
+      - name: Build for production
+        working-directory: h-bat
+        run: npm run build
+        env:
+          NODE_ENV: production
+          
+      - name: Deployment status
+        run: |
+          echo "✅ Build completed successfully!"
+          echo "🚀 Ready for Vercel deployment"
+          echo "📦 Build artifacts created in .next directory" 
