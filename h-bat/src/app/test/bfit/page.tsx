@@ -53,13 +53,45 @@ export default function BFITTestPage() {
       return
     }
 
+    console.log('BFIT Page: Checking hearing threshold...', {
+      hasCurrentSession: !!currentSession,
+      sessionId: currentSession?.sessionId
+    })
+
     const hearingThreshold = getAverageHearingThreshold()
-    if (!hearingThreshold) {
-      setError('聴力閾値データが見つかりません')
-      setPageState('error')
-      return
+    console.log('BFIT Page: Hearing threshold from store:', hearingThreshold)
+
+    // staircaseStoreから取得できない場合、localStorageから取得を試行
+    let finalThreshold = hearingThreshold
+    if (!finalThreshold || finalThreshold <= 0 || !isFinite(finalThreshold)) {
+      try {
+        const storedThresholds = localStorage.getItem('h-bat-hearing-thresholds')
+        if (storedThresholds) {
+          const thresholds = JSON.parse(storedThresholds)
+          console.log('BFIT Page: Found stored thresholds:', thresholds)
+          
+          if (typeof thresholds === 'object' && thresholds !== null) {
+            const values = Object.values(thresholds).filter((val): val is number => 
+              typeof val === 'number' && isFinite(val) && val > 0
+            )
+            
+            if (values.length > 0) {
+              finalThreshold = values.reduce((sum, val) => sum + val, 0) / values.length
+              console.log('BFIT Page: Using localStorage hearing threshold:', finalThreshold)
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('BFIT Page: Error reading stored thresholds:', error)
+      }
     }
 
+    if (!finalThreshold || finalThreshold <= 0 || !isFinite(finalThreshold)) {
+      console.warn('BFIT Page: No valid hearing threshold found, using default')
+      finalThreshold = 50 // デフォルト値
+    }
+
+    console.log('BFIT Page: Final hearing threshold:', finalThreshold)
     setPageState('ready')
   }, [currentSession, router, getAverageHearingThreshold])
 

@@ -18,7 +18,7 @@ import { Headphones, AlertCircle, CheckCircle } from 'lucide-react'
 // 聴力測定ページ
 export default function HearingTestPage() {
   const router = useRouter()
-  const { currentSession, startTest } = useStaircaseStore()
+  const { currentSession, startTest, completeTest } = useStaircaseStore()
   const { steps, progress, completeCurrentStep, saveHearingThresholds } = useTestNavigation()
   const [sessionId, setSessionId] = useState<string>('')
   const [profileId, setProfileId] = useState<string>('')
@@ -68,13 +68,65 @@ export default function HearingTestPage() {
   // テスト完了処理
   useEffect(() => {
     if (state.isCompleted && allResults.length > 0) {
-      // 聴力閾値を保存
+      console.log('Hearing test completed, saving results to staircaseStore...', allResults)
+      
+      // staircaseStoreに結果を保存
+      const { currentSession } = useStaircaseStore.getState()
+      if (currentSession) {
+        const results = new Map()
+        
+        // 聴力テスト結果をstaircaseStoreのフォーマットに変換
+        allResults.forEach(result => {
+          results.set(result.frequency, {
+            threshold: result.thresholdDb,
+            confidence: result.convergenceAnalysis?.confidence || 0.8,
+            totalTrials: result.trials?.length || 0,
+            totalReversals: result.convergenceAnalysis?.reversalCount || 0,
+            isConverged: result.convergenceAnalysis?.isConverged || true,
+            startedAt: new Date(),
+            completedAt: new Date(),
+            sessionId: sessionId,
+            profileId: profileId
+          })
+        })
+        
+        // staircaseStoreを更新
+        useStaircaseStore.setState(state => {
+          if (!state.currentSession) return state
+          
+          return {
+            ...state,
+            currentSession: {
+              ...state.currentSession,
+              hearingTest: {
+                ...state.currentSession.hearingTest,
+                results,
+                isCompleted: true
+              }
+            }
+          }
+        })
+        
+        console.log('Hearing test results saved to staircaseStore:', results)
+      }
+      
+      // テスト完了をマーク
+      completeTest('hearing')
+      
+      // localStorageにも保存（バックアップ）
       const thresholds = allResults.reduce((acc, result) => {
-        acc[`${result.frequency / 1000}kHz`] = result.thresholdDb
+        acc[result.frequency] = result.thresholdDb
         return acc
       }, {} as Record<string, number>)
       
-      saveHearingThresholds(thresholds)
+      localStorage.setItem('h-bat-hearing-thresholds', JSON.stringify(thresholds))
+      console.log('Hearing thresholds saved to localStorage:', thresholds)
+      
+      // useTestNavigationの聴力閾値も保存
+      saveHearingThresholds(allResults.reduce((acc, result) => {
+        acc[`${result.frequency / 1000}kHz`] = result.thresholdDb
+        return acc
+      }, {} as Record<string, number>))
       
       // 次のテストに移動（BST画面へ）
       setTimeout(() => {
@@ -87,7 +139,7 @@ export default function HearingTestPage() {
         router.push('/test/bst')
       }, 3000)
     }
-  }, [state.isCompleted, allResults, saveHearingThresholds, completeCurrentStep, router])
+  }, [state.isCompleted, allResults, saveHearingThresholds, completeCurrentStep, router, sessionId, profileId, completeTest])
 
   // 応答ハンドラー
   const handleResponse = (heard: boolean) => {

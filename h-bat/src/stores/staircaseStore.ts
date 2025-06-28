@@ -627,28 +627,125 @@ export const useStaircaseStore = create<StaircaseStore>()(
 
         getHearingThresholdAverage: () => {
           const { currentSession } = get()
-          if (!currentSession || !currentSession.hearingTest.isCompleted) {
+          console.log('getHearingThresholdAverage called:', {
+            hasCurrentSession: !!currentSession,
+            hearingTestCompleted: currentSession?.hearingTest.isCompleted,
+            resultsSize: currentSession?.hearingTest.results.size || 0,
+            results: currentSession?.hearingTest.results ? Array.from(currentSession.hearingTest.results.entries()) : []
+          })
+
+          if (!currentSession) {
+            console.warn('No current session for hearing threshold')
             return 70 // デフォルト値
           }
 
           const results = Array.from(currentSession.hearingTest.results.values())
-          if (results.length === 0) return 70
+          console.log('Hearing test results:', results)
 
-          const totalThreshold = results.reduce((sum, result) => sum + result.threshold, 0)
-          return totalThreshold / results.length
+          // 結果がある場合は完了フラグに関係なく平均を計算
+          if (results.length > 0) {
+            const validResults = results.filter(result => 
+              result && 
+              typeof result.threshold === 'number' && 
+              isFinite(result.threshold) && 
+              result.threshold > 0
+            )
+            
+            console.log('Valid hearing results:', validResults)
+            
+            if (validResults.length > 0) {
+              const totalThreshold = validResults.reduce((sum, result) => sum + result.threshold, 0)
+              const average = totalThreshold / validResults.length
+              console.log('Calculated hearing threshold average:', average)
+              return average
+            }
+          }
+
+          // 完了していない場合でも、localStorage から聴力閾値を取得を試行
+          try {
+            const storedThresholds = localStorage.getItem('h-bat-hearing-thresholds')
+            if (storedThresholds) {
+              const thresholds = JSON.parse(storedThresholds)
+              console.log('Found stored hearing thresholds:', thresholds)
+              
+              if (typeof thresholds === 'object' && thresholds !== null) {
+                const values = Object.values(thresholds).filter((val): val is number => 
+                  typeof val === 'number' && isFinite(val) && val > 0
+                )
+                
+                if (values.length > 0) {
+                  const average = values.reduce((sum, val) => sum + val, 0) / values.length
+                  console.log('Using stored hearing threshold average:', average)
+                  return average
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('Error reading stored hearing thresholds:', error)
+          }
+
+          console.warn('No valid hearing threshold found, using default value: 70')
+          return 70 // デフォルト値
         },
 
         getAverageHearingThreshold: () => {
           const { currentSession } = get()
-          if (!currentSession || !currentSession.hearingTest.isCompleted) {
+          console.log('getAverageHearingThreshold called:', {
+            hasCurrentSession: !!currentSession,
+            hearingTestCompleted: currentSession?.hearingTest.isCompleted,
+            resultsSize: currentSession?.hearingTest.results.size || 0
+          })
+
+          if (!currentSession) {
+            console.warn('No current session for hearing threshold')
             return 70 // デフォルト値
           }
 
           const results = Array.from(currentSession.hearingTest.results.values())
-          if (results.length === 0) return 70
+          console.log('Hearing test results (getAverageHearingThreshold):', results)
 
-          const totalThreshold = results.reduce((sum, result) => sum + result.threshold, 0)
-          return totalThreshold / results.length
+          // 結果がある場合は完了フラグに関係なく平均を計算
+          if (results.length > 0) {
+            const validResults = results.filter(result => 
+              result && 
+              typeof result.threshold === 'number' && 
+              isFinite(result.threshold) && 
+              result.threshold > 0
+            )
+            
+            if (validResults.length > 0) {
+              const totalThreshold = validResults.reduce((sum, result) => sum + result.threshold, 0)
+              const average = totalThreshold / validResults.length
+              console.log('Calculated hearing threshold average (getAverageHearingThreshold):', average)
+              return average
+            }
+          }
+
+          // 完了していない場合でも、localStorage から聴力閾値を取得を試行
+          try {
+            const storedThresholds = localStorage.getItem('h-bat-hearing-thresholds')
+            if (storedThresholds) {
+              const thresholds = JSON.parse(storedThresholds)
+              console.log('Found stored hearing thresholds (getAverageHearingThreshold):', thresholds)
+              
+              if (typeof thresholds === 'object' && thresholds !== null) {
+                const values = Object.values(thresholds).filter((val): val is number => 
+                  typeof val === 'number' && isFinite(val) && val > 0
+                )
+                
+                if (values.length > 0) {
+                  const average = values.reduce((sum, val) => sum + val, 0) / values.length
+                  console.log('Using stored hearing threshold average (getAverageHearingThreshold):', average)
+                  return average
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('Error reading stored hearing thresholds (getAverageHearingThreshold):', error)
+          }
+
+          console.warn('No valid hearing threshold found (getAverageHearingThreshold), using default value: 70')
+          return 70 // デフォルト値
         },
 
         completeTest: async (testType: TestType) => {

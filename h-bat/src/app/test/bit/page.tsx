@@ -43,22 +43,59 @@ export default function BITTestPage() {
   // セッション確認
   useEffect(() => {
     const initializePage = async () => {
+      console.log('BIT Page: Initializing page...', {
+        hasCurrentSession: !!currentSession,
+        sessionId: currentSession?.sessionId,
+        hearingTestCompleted: currentSession?.hearingTest?.isCompleted,
+        hearingTestResults: currentSession?.hearingTest?.results?.size || 0
+      })
+
       if (!currentSession) {
-        console.warn('No active session found, redirecting to hearing test')
+        console.warn('BIT Page: No active session found, redirecting to hearing test')
         router.push('/test/hearing')
         return
       }
 
-      // 聴力閾値の確認
-      const hearingThreshold = getHearingThresholdAverage()
-      if (!hearingThreshold || hearingThreshold === 0) {
-        console.warn('No hearing threshold found, redirecting to hearing test')
-        router.push('/test/hearing')
-        return
+      // 聴力閾値の確認 - より詳細なデバッグ
+      const hearingThresholdFromStore = getHearingThresholdAverage()
+      console.log('BIT Page: Hearing threshold check:', {
+        rawThreshold: hearingThresholdFromStore,
+        isValid: hearingThresholdFromStore && hearingThresholdFromStore > 0 && isFinite(hearingThresholdFromStore),
+        sessionHearingResults: currentSession.hearingTest?.results ? 
+          Array.from(currentSession.hearingTest.results.entries()) : 'No results'
+      })
+
+      // より柔軟な聴力閾値取得
+      if (!hearingThresholdFromStore || hearingThresholdFromStore <= 0 || !isFinite(hearingThresholdFromStore)) {
+        try {
+          const storedThresholds = localStorage.getItem('h-bat-hearing-thresholds')
+          if (storedThresholds) {
+            const thresholds = JSON.parse(storedThresholds)
+            console.log('BIT Page: Found stored thresholds:', thresholds)
+            
+            if (typeof thresholds === 'object' && thresholds !== null) {
+              const values = Object.values(thresholds).filter((val): val is number => 
+                typeof val === 'number' && isFinite(val) && val > 0
+              )
+              
+              if (values.length > 0) {
+                const avgThreshold = values.reduce((sum, val) => sum + val, 0) / values.length
+                console.log('BIT Page: Using localStorage hearing threshold:', avgThreshold)
+                setPageState('ready')
+                return
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('BIT Page: Error reading stored thresholds:', error)
+        }
       }
+
+      // 最終的にデフォルト値を使用
+      console.log('BIT Page: Using final hearing threshold for initialization')
 
       try {
-        console.log('BIT page: Initializing with hearing threshold:', hearingThreshold)
+        console.log('BIT page: Initializing with hearing threshold:', hearingThresholdFromStore || 50)
         setPageState('ready')
       } catch (error) {
         console.error('BIT page initialization error:', error)
@@ -72,11 +109,43 @@ export default function BITTestPage() {
 
   // BITテスト設定
   const rawHearingThreshold = getHearingThresholdAverage()
-  const hearingThreshold = isFinite(rawHearingThreshold) && rawHearingThreshold > 0 
-    ? rawHearingThreshold 
-    : 40 // デフォルト値
+  console.log('BIT Page: Raw hearing threshold from store:', rawHearingThreshold)
   
-  console.log('BIT Page: Using hearing threshold:', hearingThreshold, 'from raw:', rawHearingThreshold)
+  // より柔軟な聴力閾値取得
+  let finalHearingThreshold = rawHearingThreshold
+  
+  // staircaseStoreから取得できない場合、localStorageから取得
+  if (!finalHearingThreshold || finalHearingThreshold <= 0 || !isFinite(finalHearingThreshold)) {
+    try {
+      const storedThresholds = localStorage.getItem('h-bat-hearing-thresholds')
+      if (storedThresholds) {
+        const thresholds = JSON.parse(storedThresholds)
+        console.log('BIT Page: Found stored thresholds:', thresholds)
+        
+        if (typeof thresholds === 'object' && thresholds !== null) {
+          const values = Object.values(thresholds).filter((val): val is number => 
+            typeof val === 'number' && isFinite(val) && val > 0
+          )
+          
+          if (values.length > 0) {
+            finalHearingThreshold = values.reduce((sum, val) => sum + val, 0) / values.length
+            console.log('BIT Page: Using localStorage hearing threshold:', finalHearingThreshold)
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('BIT Page: Error reading stored thresholds:', error)
+    }
+  }
+  
+  // 最終的にデフォルト値を使用
+  if (!finalHearingThreshold || finalHearingThreshold <= 0 || !isFinite(finalHearingThreshold)) {
+    finalHearingThreshold = 50 // より現実的なデフォルト値
+    console.log('BIT Page: Using default hearing threshold:', finalHearingThreshold)
+  }
+  
+  const hearingThreshold = finalHearingThreshold
+  console.log('BIT Page: Final hearing threshold:', hearingThreshold)
 
   const [bitState, bitActions] = useBITTest({
     sessionId: currentSession?.sessionId || '',
