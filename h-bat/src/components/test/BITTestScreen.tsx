@@ -114,8 +114,16 @@ export default function BITTestScreen({
         
         // オーディオジェネレータ初期化
         console.log('BITTestScreen: Creating audio generator with hearing threshold:', config.hearingThreshold)
+        
+        // 聴力閾値の検証
+        const validHearingThreshold = isFinite(config.hearingThreshold) && config.hearingThreshold > 0 
+          ? config.hearingThreshold 
+          : 50 // デフォルト値
+        
+        console.log('BITTestScreen: Using validated hearing threshold:', validHearingThreshold)
+        
         const generator = new BITAudioGenerator({
-          soundLevel: config.hearingThreshold + 30
+          soundLevel: validHearingThreshold + 30
         })
         
         console.log('BITTestScreen: Initializing audio generator...')
@@ -134,7 +142,7 @@ export default function BITTestScreen({
         const controller = new BITStaircaseController(
           config.sessionId,
           config.profileId,
-          config.hearingThreshold
+          validHearingThreshold
         )
         
         if (!isMounted) return

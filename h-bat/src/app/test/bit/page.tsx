@@ -71,7 +71,13 @@ export default function BITTestPage() {
   }, [currentSession, getHearingThresholdAverage, router])
 
   // BITテスト設定
-  const hearingThreshold = getHearingThresholdAverage() || 40
+  const rawHearingThreshold = getHearingThresholdAverage()
+  const hearingThreshold = isFinite(rawHearingThreshold) && rawHearingThreshold > 0 
+    ? rawHearingThreshold 
+    : 40 // デフォルト値
+  
+  console.log('BIT Page: Using hearing threshold:', hearingThreshold, 'from raw:', rawHearingThreshold)
+
   const [bitState, bitActions] = useBITTest({
     sessionId: currentSession?.sessionId || '',
     profileId: currentSession?.profileId || '',

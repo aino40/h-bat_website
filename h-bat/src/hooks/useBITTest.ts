@@ -166,6 +166,13 @@ export function useBITTest(config: BITTestConfig): [BITTestState, BITTestActions
       console.log('Initializing BIT test...')
       setState(prev => ({ ...prev, hasError: false, errorMessage: null }))
 
+      // 聴力閾値の検証
+      const validHearingThreshold = isFinite(config.hearingThreshold) && config.hearingThreshold > 0 
+        ? config.hearingThreshold 
+        : 50 // デフォルト値
+
+      console.log('BIT: Using hearing threshold:', validHearingThreshold)
+
       // 既存のリソースを解放
       if (audioGeneratorRef.current) {
         audioGeneratorRef.current.dispose()
@@ -174,7 +181,7 @@ export function useBITTest(config: BITTestConfig): [BITTestState, BITTestActions
 
       // オーディオジェネレータ初期化
       const audioGenerator = new BITAudioGenerator({
-        soundLevel: config.hearingThreshold + 30
+        soundLevel: validHearingThreshold + 30
       })
       
       console.log('Initializing BIT audio generator...')
@@ -185,7 +192,7 @@ export function useBITTest(config: BITTestConfig): [BITTestState, BITTestActions
       const staircaseController = new BITStaircaseController(
         config.sessionId,
         config.profileId,
-        config.hearingThreshold
+        validHearingThreshold
       )
       staircaseControllerRef.current = staircaseController
 
@@ -261,14 +268,24 @@ export function useBITTest(config: BITTestConfig): [BITTestState, BITTestActions
       const currentSlopeK = staircaseController.getCurrentSlopeK()
       console.log('BIT: Current slope K:', currentSlopeK)
       
+      // 値の安全性チェック
+      if (!isFinite(currentSlopeK) || currentSlopeK <= 0) {
+        throw new Error(`Invalid slope K value: ${currentSlopeK}`)
+      }
+      
       // ランダムな方向を生成
       const direction = audioGenerator.generateRandomDirection()
       console.log('BIT: Generated direction:', direction)
 
+      // 聴力閾値の検証
+      const validHearingThreshold = isFinite(config.hearingThreshold) && config.hearingThreshold > 0 
+        ? config.hearingThreshold 
+        : 50
+
       // 音源設定
       audioGenerator.setSlopeK(currentSlopeK)
       audioGenerator.setDirection(direction)
-      audioGenerator.setSoundLevel(config.hearingThreshold + 30)
+      audioGenerator.setSoundLevel(validHearingThreshold + 30)
 
       // 音声再生
       await audioGenerator.playPattern()

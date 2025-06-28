@@ -228,19 +228,54 @@ export class StaircaseController {
   private calculateNextLevel(direction: 'up' | 'down', _isReversal: boolean): number {
     let nextLevel = this.state.currentLevel
 
+    // 現在のレベルの検証
+    if (!isFinite(this.state.currentLevel) || isNaN(this.state.currentLevel)) {
+      console.warn('Staircase: Invalid current level, using initial level:', this.state.currentLevel)
+      nextLevel = this.config.initialLevel
+    }
+
+    // ステップサイズの検証
+    if (!isFinite(this.state.currentStepSize) || isNaN(this.state.currentStepSize) || this.state.currentStepSize <= 0) {
+      console.warn('Staircase: Invalid step size, using initial step size:', this.state.currentStepSize)
+      this.state.currentStepSize = this.config.initialStepSize
+    }
+
     // ステップサイズが1未満の場合は乗算方式（BST/BIT/BFIT）、それ以外は加算方式（聴力測定）
     if (this.state.currentStepSize < 1) {
       // 乗算方式
       const multiplier = direction === 'down' ? this.state.currentStepSize : (1 / this.state.currentStepSize)
-      nextLevel = this.state.currentLevel * multiplier
+      
+      // 乗数の検証
+      if (!isFinite(multiplier) || isNaN(multiplier) || multiplier <= 0) {
+        console.warn('Staircase: Invalid multiplier, using safe default:', multiplier)
+        nextLevel = direction === 'down' ? this.state.currentLevel * 0.7 : this.state.currentLevel * 1.4
+      } else {
+        nextLevel = this.state.currentLevel * multiplier
+      }
     } else {
       // 加算方式
       const delta = direction === 'down' ? -this.state.currentStepSize : this.state.currentStepSize
       nextLevel = this.state.currentLevel + delta
     }
 
+    // 結果の検証
+    if (!isFinite(nextLevel) || isNaN(nextLevel)) {
+      console.warn('Staircase: Invalid next level calculated, using current level:', nextLevel)
+      nextLevel = this.state.currentLevel
+    }
+
     // 範囲制限
-    return Math.max(this.config.minLevel, Math.min(this.config.maxLevel, nextLevel))
+    const clampedLevel = Math.max(this.config.minLevel, Math.min(this.config.maxLevel, nextLevel))
+    
+    console.log('Staircase: Level calculation:', {
+      currentLevel: this.state.currentLevel,
+      direction,
+      stepSize: this.state.currentStepSize,
+      nextLevel,
+      clampedLevel
+    })
+
+    return clampedLevel
   }
 
   private getStepSize(reversalCount: number): number {
@@ -268,18 +303,47 @@ export class StaircaseController {
     }
 
     // 最後の6回の反転点（または利用可能な全て）を使用
-    const lastReversals = this.state.reversalPoints.slice(-Math.min(6, this.state.reversalPoints.length))
+    const lastReversals = this.state.reversalPoints
+      .slice(-Math.min(6, this.state.reversalPoints.length))
+      .filter(level => isFinite(level) && !isNaN(level)) // 有効な値のみ
+
+    if (lastReversals.length === 0) {
+      console.warn('Staircase: No valid reversal points for threshold calculation')
+      this.state.threshold = this.state.currentLevel
+      this.state.confidence = 0.1
+      return
+    }
     
     // 平均値を閾値として計算
     const threshold = lastReversals.reduce((sum, level) => sum + level, 0) / lastReversals.length
     
+    // 閾値の検証
+    if (!isFinite(threshold) || isNaN(threshold)) {
+      console.warn('Staircase: Invalid threshold calculated, using current level:', threshold)
+      this.state.threshold = this.state.currentLevel
+      this.state.confidence = 0.1
+      return
+    }
+    
     // 信頼度を標準偏差から計算
     const variance = lastReversals.reduce((sum, level) => sum + Math.pow(level - threshold, 2), 0) / lastReversals.length
     const standardDeviation = Math.sqrt(variance)
-    const confidence = Math.max(0, Math.min(1, 1 - (standardDeviation / threshold)))
+    
+    // 信頼度の安全な計算
+    let confidence = 0.5 // デフォルト値
+    if (isFinite(standardDeviation) && threshold > 0) {
+      confidence = Math.max(0, Math.min(1, 1 - (standardDeviation / threshold)))
+    }
 
     this.state.threshold = threshold
     this.state.confidence = confidence
+    
+    console.log('Staircase: Threshold calculation:', {
+      reversalPoints: lastReversals,
+      threshold,
+      standardDeviation,
+      confidence
+    })
   }
 
   // 現在の状態を取得

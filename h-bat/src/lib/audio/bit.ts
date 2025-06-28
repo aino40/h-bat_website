@@ -126,6 +126,10 @@ export class BITAudioGenerator {
       // 少し待機
       await new Promise(resolve => setTimeout(resolve, 50))
 
+      // 安全な音量レベルを計算
+      const safeVolume = this.dbToGain(this.config.soundLevel)
+      console.log('BIT: Safe volume calculated:', safeVolume)
+
       // 合成音源初期化
       console.log('BIT: Creating kick synth...')
       this.kickSynth = new Tone.MembraneSynth({
@@ -135,7 +139,7 @@ export class BITAudioGenerator {
           sustain: 0,
           release: 0.3
         },
-        volume: this.dbToGain(this.config.soundLevel)
+        volume: safeVolume
       }).toDestination()
 
       console.log('BIT: Creating snare synth...')
@@ -149,7 +153,7 @@ export class BITAudioGenerator {
           sustain: 0,
           release: 0.2
         },
-        volume: this.dbToGain(this.config.soundLevel)
+        volume: safeVolume
       }).toDestination()
 
       // 初期化完了
@@ -173,11 +177,34 @@ export class BITAudioGenerator {
     }
   }
 
-  // dBからゲインへの変換（適切な範囲に調整）
+  // dBからゲインへの安全な変換
   private dbToGain(db: number): number {
-    // dB SPLを適切な音量レベルに変換（-40～0dBの範囲）
-    const normalizedDb = Math.max(-40, Math.min(0, db - 70))
-    return Math.pow(10, normalizedDb / 20)
+    try {
+      // 入力値の検証
+      if (!isFinite(db) || isNaN(db)) {
+        console.warn('BIT: Invalid dB value, using default:', db)
+        db = 70 // デフォルト値
+      }
+
+      // dB SPLを適切な音量レベルに変換（-40～0dBの範囲）
+      const normalizedDb = Math.max(-40, Math.min(0, db - 70))
+      const gain = Math.pow(10, normalizedDb / 20)
+      
+      // ゲイン値の検証
+      if (!isFinite(gain) || isNaN(gain) || gain < 0) {
+        console.warn('BIT: Invalid gain calculated, using safe default:', gain)
+        return 0.1 // 安全なデフォルト値
+      }
+      
+      // 範囲制限
+      const safeGain = Math.max(0.001, Math.min(1.0, gain))
+      console.log('BIT: dB to gain conversion:', { db, normalizedDb, gain, safeGain })
+      
+      return safeGain
+    } catch (error) {
+      console.error('BIT: Error in dbToGain conversion:', error)
+      return 0.1 // エラー時のフォールバック
+    }
   }
 
   // BITパターン設定
@@ -186,19 +213,32 @@ export class BITAudioGenerator {
     this.updateSoundLevel()
   }
 
-  // 音圧レベル更新
+  // 音圧レベル更新（安全な設定）
   private updateSoundLevel(): void {
-    if (this.kickSynth) {
-      this.kickSynth.volume.value = this.dbToGain(this.config.soundLevel)
-    }
-    if (this.snareSynth) {
-      this.snareSynth.volume.value = this.dbToGain(this.config.soundLevel)
+    try {
+      const safeVolume = this.dbToGain(this.config.soundLevel)
+      
+      if (this.kickSynth && this.kickSynth.volume) {
+        this.kickSynth.volume.value = safeVolume
+        console.log('BIT: Updated kick synth volume:', safeVolume)
+      }
+      if (this.snareSynth && this.snareSynth.volume) {
+        this.snareSynth.volume.value = safeVolume
+        console.log('BIT: Updated snare synth volume:', safeVolume)
+      }
+    } catch (error) {
+      console.error('BIT: Error updating sound level:', error)
     }
   }
 
-  // 傾きK設定
+  // 傾きK設定（安全な範囲制限）
   setSlopeK(k: number): void {
+    if (!isFinite(k) || isNaN(k)) {
+      console.warn('BIT: Invalid slope K value, using default:', k)
+      k = 5
+    }
     this.config.slopeK = Math.max(0.1, Math.min(50, k)) // 0.1-50ms/beat範囲
+    console.log('BIT: Slope K set to:', this.config.slopeK)
   }
 
   // テンポ方向設定
@@ -206,9 +246,13 @@ export class BITAudioGenerator {
     this.config.direction = direction
   }
 
-  // 音圧レベル設定
+  // 音圧レベル設定（安全な設定）
   setSoundLevel(level: number): void {
-    this.config.soundLevel = level
+    if (!isFinite(level) || isNaN(level)) {
+      console.warn('BIT: Invalid sound level, using default:', level)
+      level = 70
+    }
+    this.config.soundLevel = Math.max(40, Math.min(100, level)) // 40-100dB範囲
     this.updateSoundLevel()
   }
 
@@ -251,26 +295,44 @@ export class BITAudioGenerator {
       const ioiSequence = this.generateIOISequence()
       console.log('BIT: Generated IOI sequence:', ioiSequence)
       
+      // 値の検証
+      if (!ioiSequence.every(ioi => isFinite(ioi) && ioi > 0)) {
+        throw new Error('Invalid IOI sequence generated')
+      }
+      
       // パート作成
       const events: Array<{ time: string; ioi: number; index: number }> = []
       let cumulativeTime = 0
 
       for (let i = 0; i < ioiSequence.length; i++) {
+        const ioi = ioiSequence[i]!
         events.push({
           time: `+${cumulativeTime / 1000}`, // 秒に変換
-          ioi: ioiSequence[i]!,
+          ioi,
           index: i
         })
-        cumulativeTime += ioiSequence[i]!
+        cumulativeTime += ioi
       }
+
+      console.log('BIT: Created events:', events.slice(0, 3), '...')
 
       this.part = new Tone.Part((time, event) => {
         try {
+          // 時間値の検証
+          if (!isFinite(time) || time < 0) {
+            console.warn('BIT: Invalid time value:', time)
+            return
+          }
+
           // キックとスネアを交互に再生
           if (event.index % 2 === 0) {
-            this.kickSynth?.triggerAttackRelease('C2', '8n', time)
+            if (this.kickSynth) {
+              this.kickSynth.triggerAttackRelease('C2', '8n', time)
+            }
           } else {
-            this.snareSynth?.triggerAttackRelease('8n', time)
+            if (this.snareSynth) {
+              this.snareSynth.triggerAttackRelease('8n', time)
+            }
           }
         } catch (error) {
           console.error('BIT: Error during sound playback:', error)
@@ -295,12 +357,17 @@ export class BITAudioGenerator {
 
   // パターン停止
   stopPattern(): void {
-    if (this.part) {
-      this.part.stop()
-      this.part.dispose()
-      this.part = null
+    try {
+      if (this.part) {
+        this.part.stop()
+        this.part.dispose()
+        this.part = null
+      }
+      Tone.Transport.stop()
+      console.log('BIT: Pattern stopped')
+    } catch (error) {
+      console.error('BIT: Error stopping pattern:', error)
     }
-    Tone.Transport.stop()
   }
 
   // 現在の設定取得
@@ -315,18 +382,23 @@ export class BITAudioGenerator {
 
   // リソース解放
   dispose(): void {
-    this.stopPattern()
-    
-    if (this.kickSynth) {
-      this.kickSynth.dispose()
-      this.kickSynth = null
+    try {
+      this.stopPattern()
+      
+      if (this.kickSynth) {
+        this.kickSynth.dispose()
+        this.kickSynth = null
+      }
+      if (this.snareSynth) {
+        this.snareSynth.dispose()
+        this.snareSynth = null
+      }
+      
+      this.isInitialized = false
+      console.log('BIT: Audio generator disposed')
+    } catch (error) {
+      console.error('BIT: Error during disposal:', error)
     }
-    if (this.snareSynth) {
-      this.snareSynth.dispose()
-      this.snareSynth = null
-    }
-    
-    this.isInitialized = false
   }
 }
 

@@ -103,12 +103,23 @@ export class BITStaircaseController {
 
   // 現在のIOI変化率取得
   getCurrentSlopeK(): number {
-    return this.controller.getCurrentLevel()
+    const level = this.controller.getCurrentLevel()
+    // 値の検証と安全な範囲制限
+    if (!isFinite(level) || isNaN(level) || level <= 0) {
+      console.warn('BIT: Invalid slope K level, using default:', level)
+      return 5 // デフォルト値
+    }
+    return Math.max(0.1, Math.min(20, level))
   }
 
   // 音圧レベル計算（聴力閾値+30dB）
   getSoundLevel(): number {
-    return this.hearingThreshold + 30
+    if (!isFinite(this.hearingThreshold) || isNaN(this.hearingThreshold)) {
+      console.warn('BIT: Invalid hearing threshold, using default:', this.hearingThreshold)
+      return 70 // デフォルト音圧レベル
+    }
+    const soundLevel = this.hearingThreshold + 30
+    return Math.max(40, Math.min(100, soundLevel)) // 40-100dB範囲
   }
 
   // 応答記録
