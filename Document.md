@@ -144,6 +144,47 @@
 - [ ] **Q-3** 研究者向け運用マニュアル作成（データ解釈・エクスポート手順）
 - [ ] **Q-4** 基本エラー監視設定（研究データ品質確保）
 
+### R ローカルSQL移行実装 *(新規追加)*
+- [ ] **R-1** SQLiteデータベーススキーマ設計・DDL作成
+- [ ] **R-2** better-sqlite3 + Knex.js設定・データベース接続確立
+- [ ] **R-3** データベースマイグレーション機能実装
+- [ ] **R-4** プロフィール・セッション管理 API（Next.js API Routes）
+- [ ] **R-5** 聴力閾値測定データ保存・取得機能
+
+- [ ] **R-6** BST試行データローカル保存・SQLite連携
+- [ ] **R-7** BIT試行データローカル保存・SQLite連携  
+- [ ] **R-8** BFIT試行データローカル保存・SQLite連携
+- [ ] **R-9** 閾値計算結果のローカルデータベース保存
+- [ ] **R-10** 管理者認証システム（SQLite + session-based）
+
+- [ ] **R-11** ローカルCSVエクスポート機能実装
+- [ ] **R-12** データベース初期化・シードデータ投入スクリプト
+- [ ] **R-13** SQLiteデータベースバックアップ機能
+- [ ] **R-14** ローカル版管理者ダッシュボード調整
+- [ ] **R-15** オフライン対応・データ同期機能（オプション）
+
+### 🔄 **移行戦略: Supabase版 → ローカルSQL版**
+
+#### **Phase 1: ローカルSQL基盤構築（Week 1-2）**
+1. **R-1～R-3**: SQLiteスキーマ設計・マイグレーション環境
+2. **R-4～R-5**: 基本的なAPI・データ保存機能
+3. **既存コード保持**: Supabase版は残したまま並行開発
+
+#### **Phase 2: テスト機能移行（Week 3-4）**  
+1. **R-6～R-9**: 各テスト（BST/BIT/BFIT）のローカル保存対応
+2. **R-10**: 管理者認証のローカル対応
+3. **動作検証**: 各テストがローカルDBで正常動作することを確認
+
+#### **Phase 3: 管理機能・エクスポート（Week 5-6）**
+1. **R-11**: CSVエクスポートのローカル対応
+2. **R-12～R-14**: 運用機能・ダッシュボード調整
+3. **R-15**: オフライン対応（研究機関ニーズに応じて）
+
+#### **🎯 選択可能な構成**
+- **Supabase版**: 既存のクラウド対応版（継続運用）
+- **ローカルSQL版**: 新規のオフライン・プライバシー重視版
+- **ハイブリッド**: 両方を環境変数で切り替え可能
+
 ---
 
 ### 📋 即座に実行可能なタスク（優先度順）
@@ -894,6 +935,8 @@ const FeedbackAnimation = ({ isCorrect }: { isCorrect: boolean }) => {
 ---
 
 ## 7. 技術アーキテクチャ
+
+### 7-1 オリジナル版（Supabase）
 | 層 | 技術 | 役割 |
 |----|------|------|
 | Front | Next.js 15, React 19, TypeScript | UI / ルーティング |
@@ -902,9 +945,28 @@ const FeedbackAnimation = ({ isCorrect }: { isCorrect: boolean }) => {
 | Back-end | Supabase (PostgreSQL, Auth, Storage) | データ永続化・認証 |
 | Hosting | Vercel | CI/CD & CDN |
 
+### 7-2 ローカルSQL版（新規対応）
+| 層 | 技術 | 役割 |
+|----|------|------|
+| Front | Next.js 15, React 19, TypeScript | UI / ルーティング |
+| Audio | Tone.js | テスト刺激合成 (Kick/Snare 音) |
+| Database | SQLite + better-sqlite3 | ローカルデータ永続化 |
+| CSV Export | Node.js + csv-writer | データエクスポート機能 |
+| Auth | Simple Session (Local Storage) | 軽量認証・セッション管理 |
+| Hosting | Vercel / Self-hosting | 柔軟なホスティング選択肢 |
+
+### 7-3 ローカルSQL版の利点
+- **オフライン対応**: インターネット接続不要でテスト実行可能
+- **データプライバシー**: すべてのデータがローカルに保存
+- **導入コスト削減**: クラウドサービス費用不要
+- **研究機関での利用**: 機関内サーバーでの運用が可能
+- **カスタマイズ性**: データベーススキーマの自由な変更が可能
+
 ---
 
 ## 8. ディレクトリ構成
+
+### 8-1 オリジナル版（Supabase）
 ```
 h-bat/
 ├─ apps/
@@ -920,9 +982,39 @@ h-bat/
 └─ .github/workflows/
 ```
 
+### 8-2 ローカルSQL版（新規対応）
+```
+h-bat/
+├─ src/
+│  ├─ app/           # Next.js App Router
+│  ├─ components/    # UI コンポーネント
+│  ├─ lib/           # staircase.ts, audio.ts, database.ts など
+│  ├─ types/         # TypeScript型定義
+│  └─ hooks/         # カスタムHooks
+├─ database/
+│  ├─ schema.sql     # SQLiteスキーマ定義
+│  ├─ migrations/    # マイグレーションファイル
+│  ├─ seeds/         # テストデータ
+│  └─ h-bat.db       # SQLiteデータベースファイル（実行時生成）
+├─ scripts/
+│  ├─ init-db.ts     # データベース初期化
+│  ├─ migrate.ts     # マイグレーション実行
+│  └─ export-csv.ts  # CSVエクスポート
+├─ public/
+│  └─ audio/         # 音源ファイル
+└─ tests/           # テストファイル
+```
+
+### 8-3 データベースファイル配置
+- **開発環境**: `database/h-bat.db`
+- **本番環境**: `/var/lib/h-bat/h-bat.db` または設定可能パス
+- **バックアップ**: 定期的にデータベースファイルをコピー保存
+
 ---
 
 ## 9. 主要ライブラリ
+
+### 9-1 オリジナル版（Supabase）
 - `@supabase/supabase-js` v2  
 - `tone`（MP3 不要、サンプル音を事前ロード）  
 - `react-hook-form` + `zod`  
@@ -931,9 +1023,45 @@ h-bat/
 - `recharts`  
 - `vitest`, `playwright`  
 
+### 9-2 ローカルSQL版（新規対応）
+- `better-sqlite3` - 高性能なSQLiteバインディング
+- `sqlite3` - Node.js SQLiteドライバー（フォールバック）
+- `knex` - SQLクエリビルダー・マイグレーション管理
+- `csv-writer` - CSVファイル生成ライブラリ
+- `csv-parser` - CSVファイル読み込み
+- `tone` - 音響処理（共通）
+- `react-hook-form` + `zod` - フォーム管理・バリデーション（共通）
+- `zustand` - 状態管理（共通）
+- `recharts` - グラフ描画（共通）
+- `vitest`, `playwright` - テスト（共通）
+
+### 9-3 package.json設定例（ローカルSQL版）
+```json
+{
+  "dependencies": {
+    "better-sqlite3": "^9.2.2",
+    "knex": "^3.1.0",
+    "csv-writer": "^1.6.0",
+    "csv-parser": "^3.0.0",
+    "tone": "15.1.22",
+    "react-hook-form": "^7.58.1",
+    "zod": "^3.25.67",
+    "zustand": "^5.0.5",
+    "recharts": "^2.8.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "vitest": "^3.2.4",
+    "playwright": "^1.53.0"
+  }
+}
+```
+
 ---
 
 ## 10. データベース & RLS 設計
+
+### 10-1 オリジナル版（Supabase PostgreSQL + RLS）
 | テーブル | 主キー | 主な列 |
 |----------|--------|--------|
 | `profiles` | `id` | age, gender, handedness |
@@ -947,12 +1075,286 @@ h-bat/
 
 RLS：本人 or admin が閲覧可。
 
+### 10-2 ローカルSQL版（SQLite）
+| テーブル | 主キー | 主な列 | 備考 |
+|----------|--------|--------|------|
+| `profiles` | `id` (INTEGER) | age, gender, handedness, created_at | UUID→INTEGER変更 |
+| `sessions` | `id` (INTEGER) | profile_id, started_at, completed_at | 外部キー制約あり |
+| `hearing_trials` | `(session_id, frequency, idx)` | db_level, correct, created_at | 複合主キー |
+| `bst_trials` | `(session_id, idx)` | delta_db, pattern_type, correct | パターンタイプ追加 |
+| `bit_trials` | `(session_id, idx)` | slope_ms_per_beat, slope_sign, correct | 単位明確化 |
+| `bfit_trials` | `(session_id, idx)` | pattern_id, slope_ms_per_beat, slope_sign, correct | 詳細記録 |
+| `hearing_thresholds` | `(session_id, frequency)` | threshold_db, created_at | 閾値結果 |
+| `thresholds` | `session_id` | bst_threshold_db, bit_threshold_ms, bfit_threshold_ms | 統合閾値 |
+| `admin_users` | `id` (INTEGER) | username, password_hash, created_at | 管理者認証 |
+
+### 10-3 SQLiteスキーマファイル（database/schema.sql）
+```sql
+-- SQLite schema for H-BAT local version
+PRAGMA foreign_keys = ON;
+
+-- プロフィールテーブル
+CREATE TABLE IF NOT EXISTS profiles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  age INTEGER CHECK (age >= 0 AND age <= 150),
+  gender TEXT CHECK (gender IN ('male', 'female', 'other')),
+  handedness TEXT CHECK (handedness IN ('right', 'left', 'both')),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- セッションテーブル
+CREATE TABLE IF NOT EXISTS sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  profile_id INTEGER NOT NULL,
+  started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  completed_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+-- 聴力閾値測定試行
+CREATE TABLE IF NOT EXISTS hearing_trials (
+  session_id INTEGER NOT NULL,
+  frequency INTEGER NOT NULL CHECK (frequency IN (1000, 2000, 4000)),
+  idx INTEGER NOT NULL,
+  db_level REAL NOT NULL CHECK (db_level >= 0 AND db_level <= 120),
+  correct BOOLEAN NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (session_id, frequency, idx),
+  FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
+-- 聴力閾値結果
+CREATE TABLE IF NOT EXISTS hearing_thresholds (
+  session_id INTEGER NOT NULL,
+  frequency INTEGER NOT NULL CHECK (frequency IN (1000, 2000, 4000)),
+  threshold_db REAL NOT NULL CHECK (threshold_db >= 0 AND threshold_db <= 120),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (session_id, frequency),
+  FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
+-- BST試行データ
+CREATE TABLE IF NOT EXISTS bst_trials (
+  session_id INTEGER NOT NULL,
+  idx INTEGER NOT NULL,
+  delta_db REAL NOT NULL CHECK (delta_db >= 0 AND delta_db <= 60),
+  pattern_type INTEGER NOT NULL CHECK (pattern_type IN (2, 3)),
+  correct BOOLEAN NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (session_id, idx),
+  FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
+-- BIT試行データ  
+CREATE TABLE IF NOT EXISTS bit_trials (
+  session_id INTEGER NOT NULL,
+  idx INTEGER NOT NULL,
+  slope_ms_per_beat REAL NOT NULL,
+  slope_sign INTEGER NOT NULL CHECK (slope_sign IN (-1, 1)),
+  correct BOOLEAN NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (session_id, idx),
+  FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
+-- BFIT試行データ
+CREATE TABLE IF NOT EXISTS bfit_trials (
+  session_id INTEGER NOT NULL,
+  idx INTEGER NOT NULL,
+  pattern_id TEXT NOT NULL,
+  slope_ms_per_beat REAL NOT NULL,
+  slope_sign INTEGER NOT NULL CHECK (slope_sign IN (-1, 1)),
+  correct BOOLEAN NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (session_id, idx),
+  FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
+-- 最終閾値結果
+CREATE TABLE IF NOT EXISTS thresholds (
+  session_id INTEGER PRIMARY KEY,
+  bst_threshold_db REAL,
+  bit_threshold_ms REAL,
+  bfit_threshold_ms REAL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
+-- 管理者ユーザー
+CREATE TABLE IF NOT EXISTS admin_users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- インデックス作成
+CREATE INDEX IF NOT EXISTS idx_sessions_profile_id ON sessions(profile_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_created_at ON sessions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_hearing_trials_session_frequency ON hearing_trials(session_id, frequency);
+CREATE INDEX IF NOT EXISTS idx_bst_trials_session ON bst_trials(session_id);
+CREATE INDEX IF NOT EXISTS idx_bit_trials_session ON bit_trials(session_id);
+CREATE INDEX IF NOT EXISTS idx_bfit_trials_session ON bfit_trials(session_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_completed_at ON sessions(completed_at DESC);
+```
+
+### 10-4 認証方式の違い
+- **Supabase版**: Supabase Auth + RLS（行レベルセキュリティ）
+- **ローカルSQL版**: シンプルなセッション認証 + admin_usersテーブル
+
 ---
 
 ## 11. API & エッジ関数
+
+### 11-1 オリジナル版（Supabase Edge Functions）
 `POST /functions/v1/export-csv`  
 入力: 期間（start, end）  
 出力: thresholds, trials を結合した CSV URL
+
+### 11-2 ローカルSQL版（Next.js API Routes）
+
+#### 11-2-1 データ操作API
+```typescript
+// Next.js API Routes
+GET  /api/profiles          // プロフィール一覧取得
+POST /api/profiles          // プロフィール作成
+GET  /api/sessions          // セッション一覧取得
+POST /api/sessions          // セッション作成
+PUT  /api/sessions/[id]     // セッション更新
+
+GET  /api/sessions/[id]/trials/hearing    // 聴力試行データ取得
+POST /api/sessions/[id]/trials/hearing    // 聴力試行データ保存
+GET  /api/sessions/[id]/trials/bst        // BST試行データ取得
+POST /api/sessions/[id]/trials/bst        // BST試行データ保存
+GET  /api/sessions/[id]/trials/bit        // BIT試行データ取得
+POST /api/sessions/[id]/trials/bit        // BIT試行データ保存
+GET  /api/sessions/[id]/trials/bfit       // BFIT試行データ取得
+POST /api/sessions/[id]/trials/bfit       // BFIT試行データ保存
+
+GET  /api/sessions/[id]/thresholds        // 閾値結果取得
+POST /api/sessions/[id]/thresholds        // 閾値結果保存
+```
+
+#### 11-2-2 CSVエクスポートAPI
+```typescript
+// CSV エクスポート関連
+GET  /api/export/csv?start=2024-01-01&end=2024-12-31&type=all
+POST /api/export/csv        // エクスポート実行
+GET  /api/export/status     // エクスポート状況確認
+```
+
+#### 11-2-3 管理者認証API
+```typescript
+POST /api/auth/login        // 管理者ログイン
+POST /api/auth/logout       // ログアウト
+GET  /api/auth/verify       // トークン検証
+POST /api/auth/register     // 管理者アカウント作成（初回のみ）
+```
+
+### 11-3 データベース接続ライブラリ
+```typescript
+// lib/database.ts
+import Database from 'better-sqlite3';
+import path from 'path';
+
+const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), 'database/h-bat.db');
+
+export class DatabaseService {
+  private static instance: DatabaseService;
+  private db: Database.Database;
+
+  private constructor() {
+    this.db = new Database(DB_PATH);
+    this.db.pragma('foreign_keys = ON');
+  }
+
+  static getInstance(): DatabaseService {
+    if (!DatabaseService.instance) {
+      DatabaseService.instance = new DatabaseService();
+    }
+    return DatabaseService.instance;
+  }
+
+  // プロフィール操作
+  createProfile(data: ProfileData): number {
+    const stmt = this.db.prepare(`
+      INSERT INTO profiles (age, gender, handedness) 
+      VALUES (?, ?, ?)
+    `);
+    const result = stmt.run(data.age, data.gender, data.handedness);
+    return result.lastInsertRowid as number;
+  }
+
+  // セッション操作
+  createSession(profileId: number): number {
+    const stmt = this.db.prepare(`
+      INSERT INTO sessions (profile_id) VALUES (?)
+    `);
+    const result = stmt.run(profileId);
+    return result.lastInsertRowid as number;
+  }
+
+  // 試行データ保存
+  saveHearingTrial(data: HearingTrialData): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO hearing_trials (session_id, frequency, idx, db_level, correct)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    stmt.run(data.sessionId, data.frequency, data.idx, data.dbLevel, data.correct);
+  }
+
+  // CSV エクスポート用データ取得
+  getExportData(startDate: string, endDate: string): ExportData[] {
+    const stmt = this.db.prepare(`
+      SELECT 
+        p.age, p.gender, p.handedness,
+        s.id as session_id, s.started_at, s.completed_at,
+        t.bst_threshold_db, t.bit_threshold_ms, t.bfit_threshold_ms
+      FROM sessions s
+      JOIN profiles p ON s.profile_id = p.id
+      LEFT JOIN thresholds t ON s.id = t.session_id
+      WHERE DATE(s.created_at) BETWEEN ? AND ?
+      ORDER BY s.created_at DESC
+    `);
+    return stmt.all(startDate, endDate) as ExportData[];
+  }
+}
+```
+
+### 11-4 CSV エクスポート実装
+```typescript
+// scripts/export-csv.ts
+import { createWriteStream } from 'fs';
+import { createObjectCsvWriter } from 'csv-writer';
+import { DatabaseService } from '../lib/database';
+
+export async function exportToCSV(startDate: string, endDate: string, outputPath: string) {
+  const db = DatabaseService.getInstance();
+  const data = db.getExportData(startDate, endDate);
+  
+  const csvWriter = createObjectCsvWriter({
+    path: outputPath,
+    header: [
+      { id: 'session_id', title: 'Session ID' },
+      { id: 'age', title: 'Age' },
+      { id: 'gender', title: 'Gender' },
+      { id: 'handedness', title: 'Handedness' },
+      { id: 'started_at', title: 'Started At' },
+      { id: 'completed_at', title: 'Completed At' },
+      { id: 'bst_threshold_db', title: 'BST Threshold (dB)' },
+      { id: 'bit_threshold_ms', title: 'BIT Threshold (ms/beat)' },
+      { id: 'bfit_threshold_ms', title: 'BFIT Threshold (ms/beat)' }
+    ]
+  });
+  
+  await csvWriter.writeRecords(data);
+  return outputPath;
+}
+```
 
 ---
 
