@@ -7,19 +7,17 @@ import {
   Pause, 
   Volume2, 
   RotateCcw, 
-  Zap
+  Zap,
+  Music,
+  CheckCircle,
+  XCircle
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Progress } from '@/components/ui/Progress'
-import { 
-  BSTAudioGenerator
-} from '@/lib/audio/bst'
-import { 
-  BSTStaircaseController, 
-  BSTResult 
-} from '@/lib/bst/staircaseController'
+import { BSTAudioGenerator } from '@/lib/audio/bst'
+import { BSTStaircaseController, BSTResult } from '@/lib/bst/staircaseController'
 
 // プロパティ型定義
 interface BSTTestScreenProps {
@@ -30,8 +28,8 @@ interface BSTTestScreenProps {
   onError: (error: Error) => void
 }
 
-// テスト状態
-type TestState = 'loading' | 'ready' | 'playing' | 'waiting' | 'completed' | 'error'
+// テスト状態の型定義
+type TestState = 'loading' | 'ready' | 'playing' | 'waiting' | 'completed' | 'error';
 
 // BST専用のフィードバック表示
 const BSTFeedback: React.FC<{ 
@@ -43,9 +41,10 @@ const BSTFeedback: React.FC<{
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ scale: 0, opacity: 0 }}
+        initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0, opacity: 0 }}
+        exit={{ scale: 0.8, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
         className="fixed inset-0 flex items-center justify-center pointer-events-none z-50"
       >
         <motion.div
@@ -53,20 +52,24 @@ const BSTFeedback: React.FC<{
           animate={{ y: 0 }}
           exit={{ y: -20 }}
           className={`
-            px-8 py-4 rounded-full text-white font-bold text-lg shadow-lg
-            ${isCorrect ? 'bg-green-500' : 'bg-red-500'}
+            px-8 py-6 rounded-2xl text-white font-bold text-xl shadow-lg
+            backdrop-blur-sm
+            ${isCorrect 
+              ? 'bg-green-500/90 shadow-green-500/20' 
+              : 'bg-red-500/90 shadow-red-500/20'
+            }
           `}
         >
           {isCorrect ? (
-            <>
-              <Zap className="w-6 h-6 inline mr-2" />
-              正解！
-            </>
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="w-8 h-8" />
+              <span>正解！</span>
+            </div>
           ) : (
-            <>
-              <RotateCcw className="w-6 h-6 inline mr-2" />
-              もう一度
-            </>
+            <div className="flex items-center space-x-3">
+              <XCircle className="w-8 h-8" />
+              <span>もう一度</span>
+            </div>
           )}
         </motion.div>
       </motion.div>
@@ -91,38 +94,63 @@ const BSTProgress: React.FC<{
   const progressPercentage = Math.min((reversalsCount / targetReversals) * 100, 100)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* 全体進捗 */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm font-medium">
-          <span>BST 進捗</span>
-          <span>{Math.round(progressPercentage)}%</span>
+      <div className="space-y-3">
+        <div className="flex justify-between items-center">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold text-gray-800">テスト進捗</h3>
+            <p className="text-sm text-gray-500">
+              {isNearCompletion ? "もう少しで完了です！" : "音の強弱を判別してください"}
+            </p>
+          </div>
+          <div className="text-2xl font-bold text-blue-600">
+            {Math.round(progressPercentage)}%
+          </div>
         </div>
         <Progress 
           value={progressPercentage}
           max={100}
-          className={`h-2 transition-all duration-300 ${
-            isNearCompletion ? 'animate-pulse' : ''
+          className={`h-3 rounded-full transition-all duration-300 ${
+            isNearCompletion ? 'animate-pulse bg-blue-100' : ''
           }`}
         />
       </div>
 
-      {/* 詳細情報 */}
-      <div className="grid grid-cols-3 gap-4 text-center">
-        <div className="space-y-1">
-          <div className="text-2xl font-bold text-blue-600">{trialsCompleted}</div>
-          <div className="text-xs text-gray-500">試行回数</div>
-        </div>
-        <div className="space-y-1">
-          <div className="text-2xl font-bold text-purple-600">{reversalsCount}</div>
-          <div className="text-xs text-gray-500">反転回数</div>
-        </div>
-        <div className="space-y-1">
-          <div className="text-2xl font-bold text-orange-600">
-            {currentVolumeDifference.toFixed(1)}
-          </div>
-          <div className="text-xs text-gray-500">音量差(dB)</div>
-        </div>
+      {/* 詳細情報カード */}
+      <div className="grid grid-cols-3 gap-6">
+        <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600 mb-2">
+                {trialsCompleted}
+              </div>
+              <div className="text-sm text-gray-600">試行回数</div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600 mb-2">
+                {reversalsCount}
+              </div>
+              <div className="text-sm text-gray-600">反転回数</div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-orange-600 mb-2">
+                {currentVolumeDifference.toFixed(1)}
+              </div>
+              <div className="text-sm text-gray-600">音量差(dB)</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
@@ -377,134 +405,71 @@ export const BSTTestScreen: React.FC<BSTTestScreenProps> = ({
 
   // メインテスト画面
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* ヘッダー */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-center mb-2">
-            BST - 拍子知覚テスト
-          </h1>
-          <p className="text-gray-600 text-center">
-            音楽を聞いて、2拍子か3拍子かを判定してください
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+      <Card className="max-w-2xl mx-auto bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+        <CardHeader className="text-center pb-2">
+          <CardTitle className="text-2xl font-bold text-gray-800 flex items-center justify-center space-x-3">
+            <Music className="w-8 h-8 text-blue-600" />
+            <span>拍子の強弱判別テスト</span>
+          </CardTitle>
+          <p className="text-gray-600 mt-2">
+            音を聴いて、2拍子か3拍子かを判断してください
           </p>
-        </div>
+        </CardHeader>
 
-        {/* 進捗表示 */}
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <BSTProgress
-              trialsCompleted={progress.trialsCompleted}
-              reversalsCount={progress.reversalsCount}
-              targetReversals={6}
-              currentVolumeDifference={progress.currentVolumeDifference}
-              isNearCompletion={progress.reversalsCount >= 4}
-            />
-          </CardContent>
-        </Card>
+        <CardContent className="space-y-8">
+          {/* 進捗表示 */}
+          <BSTProgress
+            trialsCompleted={progress.trialsCompleted}
+            reversalsCount={progress.reversalsCount}
+            targetReversals={6}
+            currentVolumeDifference={progress.currentVolumeDifference}
+            isNearCompletion={progress.isConverged}
+          />
 
-        {/* メインテストエリア */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-center">
-              <Volume2 className="w-6 h-6 mr-2" />
-              音を聞いて判定してください
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-8">
-            <div className="text-center space-y-6">
-              {/* 再生ボタン */}
-              <div>
-                <Button
-                  onClick={isPlaying ? stopPattern : playPattern}
-                  disabled={testState !== 'ready' && testState !== 'playing'}
-                  size="lg"
-                  className={`
-                    w-20 h-20 rounded-full text-lg font-bold
-                    ${isPlaying 
-                      ? 'bg-red-500 hover:bg-red-600' 
-                      : 'bg-blue-500 hover:bg-blue-600'
-                    }
-                  `}
-                >
-                  {isPlaying ? (
-                    <Pause className="w-8 h-8" />
-                  ) : (
-                    <Play className="w-8 h-8" />
-                  )}
-                </Button>
-              </div>
-
-              {/* 説明テキスト */}
-              <div className="space-y-2">
-                {testState === 'ready' && (
-                  <p className="text-lg font-medium">
-                    ▶️ ボタンを押して音楽を再生してください
-                  </p>
-                )}
-                {testState === 'playing' && (
-                  <p className="text-lg font-medium text-blue-600">
-                    🎵 音楽を聞いています...
-                  </p>
-                )}
-                {testState === 'waiting' && (
-                  <p className="text-lg font-medium text-purple-600">
-                    💭 2拍子ですか？3拍子ですか？
-                  </p>
-                )}
-              </div>
-
-              {/* 回答ボタン */}
-              {testState === 'waiting' && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="grid grid-cols-2 gap-4 max-w-md mx-auto"
-                >
-                  <Button
-                    onClick={() => handleAnswer('2beat')}
-                    size="lg"
-                    variant="outline"
-                    className="h-16 text-lg font-bold border-2 border-blue-300 hover:bg-blue-50"
-                  >
-                    <div className="text-center">
-                      <div className="text-2xl mb-1">2</div>
-                      <div className="text-sm">拍子</div>
-                    </div>
-                  </Button>
-                  <Button
-                    onClick={() => handleAnswer('3beat')}
-                    size="lg"
-                    variant="outline"
-                    className="h-16 text-lg font-bold border-2 border-purple-300 hover:bg-purple-50"
-                  >
-                    <div className="text-center">
-                      <div className="text-2xl mb-1">3</div>
-                      <div className="text-sm">拍子</div>
-                    </div>
-                  </Button>
-                </motion.div>
+          {/* 再生コントロール */}
+          <div className="flex justify-center">
+            <Button
+              size="lg"
+              variant={isPlaying ? "outline" : "primary"}
+              onClick={isPlaying ? stopPattern : playPattern}
+              className="w-32 h-32 rounded-full shadow-lg transition-transform hover:scale-105"
+              disabled={!['ready', 'playing'].includes(testState)}
+            >
+              {isPlaying ? (
+                <Pause className="w-12 h-12" />
+              ) : (
+                <Play className="w-12 h-12" />
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </Button>
+          </div>
 
-        {/* ヒント */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center text-sm text-gray-600">
-              💡 <strong>ヒント:</strong> 
-              強く聞こえる音（強拍）の間隔を数えてみてください。
-              2拍子は「強-弱」、3拍子は「強-弱-弱」のパターンです。
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          {/* 判定ボタン */}
+          <div className="grid grid-cols-2 gap-6 mt-8">
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => handleAnswer('2beat')}
+              disabled={testState !== 'playing'}
+              className="py-8 text-lg font-semibold rounded-xl hover:bg-blue-50 transition-colors"
+            >
+              2拍子
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => handleAnswer('3beat')}
+              disabled={testState !== 'playing'}
+              className="py-8 text-lg font-semibold rounded-xl hover:bg-blue-50 transition-colors"
+            >
+              3拍子
+            </Button>
+          </div>
 
-      {/* フィードバック表示 */}
-      <BSTFeedback 
-        isCorrect={lastResponse} 
-        show={showFeedback} 
-      />
+          {/* フィードバック表示 */}
+          <BSTFeedback isCorrect={lastResponse} show={showFeedback} />
+        </CardContent>
+      </Card>
     </div>
   )
 }
