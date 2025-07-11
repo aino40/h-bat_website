@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AudioProvider } from '@/contexts/AudioContext'
-import { PWAProvider } from '@/components/PWAProvider'
+import { PWAProvider } from '../components/PWAProvider'
 
 export const metadata: Metadata = {
   title: "H-BAT | Rhythm Perception Test",
