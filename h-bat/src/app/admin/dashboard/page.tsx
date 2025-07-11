@@ -39,14 +39,55 @@ export default function AdminDashboardPage() {
       return
     }
 
-    // TODO: Fetch actual stats from Supabase
-    // For now, using placeholder data
-    setStats({
-      totalSessions: 27,
-      completedSessions: 20,
-      todaysSessions: 3
-    })
+    // Fetch actual stats from local database
+    if (user && isAdmin) {
+      fetchStats()
+    }
   }, [user, isAdmin, isLoading, router])
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/admin/stats')
+      if (response.ok) {
+        const data = await response.json()
+        setStats({
+          totalSessions: data.totalSessions || 0,
+          completedSessions: data.completedSessions || 0,
+          todaysSessions: data.todaysSessions || 0
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
+      // フォールバック: プレースホルダーデータ
+      setStats({
+        totalSessions: 0,
+        completedSessions: 0,
+        todaysSessions: 0
+      })
+    }
+  }
+
+  const createBackup = async () => {
+    try {
+      const response = await fetch('/api/admin/backup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ type: 'manual' })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        alert(`バックアップが作成されました: ${data.filename}`)
+      } else {
+        throw new Error('バックアップ作成に失敗しました')
+      }
+    } catch (error) {
+      console.error('Backup creation failed:', error)
+      alert('バックアップ作成に失敗しました')
+    }
+  }
 
   const handleSignOut = async () => {
     try {
@@ -150,7 +191,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Management Features */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {/* Session Management */}
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <div className="flex items-center space-x-3 mb-4">
@@ -209,11 +250,41 @@ export default function AdminDashboardPage() {
               <h3 className="text-lg font-semibold text-gray-900">データベース状況</h3>
             </div>
             <p className="text-gray-600 mb-4">
-              データベース接続状況とパフォーマンス監視
+              SQLiteローカルデータベース（ファイルベース）
             </p>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-green-600 font-medium">正常稼働中</span>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-green-600 font-medium">SQLite接続正常</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <span>WALモード有効</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Backup Management */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <Shield className="h-6 w-6 text-indigo-600" />
+              <h3 className="text-lg font-semibold text-gray-900">バックアップ管理</h3>
+            </div>
+            <p className="text-gray-600 mb-4">
+              データベースの手動・自動バックアップ機能
+            </p>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => createBackup()}
+                className="inline-flex items-center px-3 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                手動バックアップ
+              </button>
+              <Link
+                href="/admin/backup"
+                className="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                バックアップ管理
+              </Link>
             </div>
           </div>
         </div>

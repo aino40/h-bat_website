@@ -8,12 +8,12 @@ const nextConfig = {
     // TypeScript型チェックエラーを無視（ビルド時）
     ignoreBuildErrors: false,
   },
-  experimental: {
-    // 実験的機能の設定
-    optimizePackageImports: ['lucide-react'],
-  },
   // 静的生成を無効化してSSRエラーを回避
   output: 'standalone',
+  reactStrictMode: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
 }
 
 module.exports = nextConfig

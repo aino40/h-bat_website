@@ -181,21 +181,5 @@ export const DEFAULT_TEST_STEPS: TestStep[] = [
     icon: <BarChart3 className="h-5 w-5" />,
     status: 'pending',
     estimatedTime: 5
-  },
-  {
-    id: 'bit',
-    title: 'BIT (テンポ変化)',
-    description: '加速・減速の方向判定テスト',
-    icon: <Play className="h-5 w-5" />,
-    status: 'pending',
-    estimatedTime: 5
-  },
-  {
-    id: 'bfit',
-    title: 'BFIT (複雑リズム)',
-    description: '不等間隔パターンでのビート発見・判定',
-    icon: <Settings className="h-5 w-5" />,
-    status: 'pending',
-    estimatedTime: 7
   }
 ] 

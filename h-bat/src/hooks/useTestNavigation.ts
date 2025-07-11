@@ -72,9 +72,7 @@ export function useTestNavigation() {
 
     const stepRoutes: Record<string, string> = {
       hearing: '/test/hearing',
-      bst: '/test/bst',
-      bit: '/test/bit',
-      bfit: '/test/bfit'
+      bst: '/test/bst'
     }
 
     const route = stepRoutes[stepId]
